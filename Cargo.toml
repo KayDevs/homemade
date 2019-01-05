@@ -1,0 +1,19 @@
+[package]
+name = "homemade"
+version = "0.1.0"
+authors = ["kay"]
+edition = "2018"
+build = "build.rs"
+
+[lib]
+name = "homemade"
+path = "src/lib.rs"
+
+[[bin]]
+name = "homemade"
+path = "src/main.rs"
+
+[dependencies]
+world = {path = "src/world"}
+sdl2 = {version = "0.32.0"}#, features = ["bundled", "static-link"]}
+lazy_static = "1.2.0"

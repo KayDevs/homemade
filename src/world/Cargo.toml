@@ -1,0 +1,9 @@
+[package]
+name = "world"
+version = "0.1.0"
+authors = ["kay"]
+edition = "2018"
+
+[lib]
+name = "world"
+path = "src/lib.rs"
