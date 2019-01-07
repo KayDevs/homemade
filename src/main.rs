@@ -178,7 +178,9 @@ fn main() -> Result<(), Box<std::error::Error>> {
             }
         }
         
+        //using `update` syntax in function
         chase_player(&w, p);
+        //using new `run` SystemRunner syntax
         w.run(|(_, pos, vel): (&mut Player, &mut Position, &mut Velocity)| {
             if pos.x + 32.0 > 640 as f64 {
                 vel.x *= -1.0;
