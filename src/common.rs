@@ -1,7 +1,7 @@
 //some common components (VecStorage-level common)
 
 extern crate world;
-use world::Component;
+use world::{GameState, Component};
 use world::storage::VecStorage;
 
 #[derive(Clone)]
@@ -26,3 +26,8 @@ impl Component for RenderInfo {
     type Storage = VecStorage<Self>;
 }
 
+pub fn init(w: &mut GameState) {
+    w.register_component::<Position>();
+    w.register_component::<Name>();
+    w.register_component::<RenderInfo>();
+}

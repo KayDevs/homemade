@@ -2,6 +2,7 @@
 
 use world::{GameState, SystemRunner, Entity, Component};
 use world::storage::{HashMapStorage, BTreeMapStorage};
+use homemade::common;
 use homemade::common::{Name, Position, RenderInfo};
 use homemade::inventory;
 use homemade::stats;
@@ -65,33 +66,45 @@ impl Component for Velocity {
     type Storage = HashMapStorage<Self>;
 }
 
+mod resources {
+    pub static CURSOR: &[u8] = include_bytes!("resources/cursor.bmp");
+}
 
-fn main() {
+use sdl2::surface::Surface;
+use sdl2::pixels::Color;
+use sdl2::rwops::RWops;
+use sdl2::mouse::Cursor;
+fn load_cursor() -> Result<(), Box<std::error::Error>> {
+    let mut rwops = RWops::from_bytes(resources::CURSOR)?;
+    let mut surface = Surface::load_bmp_rw(&mut rwops)?;
+    surface.set_color_key(true, Color::RGB(255, 0, 255))?;
+    let cursor = Cursor::from_surface(&surface, 0, 0)?;
+    cursor.set();
+    Ok(())
+}
 
-    let sdl_context = sdl2::init().expect("FATAL: Could not initialize SDL2");
-    let video = sdl_context.video().expect("FATAL: Could not initialize video subsystem");
+
+fn main() -> Result<(), Box<std::error::Error>> {
+
+    let sdl_context = sdl2::init()?;
+    let video = sdl_context.video()?;
     let window = video.window("rust-sdl2 demo", 640, 400)
     .position_centered()
     .fullscreen_desktop()
-    .build()
-    .expect("FATAL: Could not create window");
+    .build()?;
 
-    let mut canvas = window.into_canvas().present_vsync().build().expect("FATAL: Could not create canvas");
-    canvas.set_logical_size(640, 400).expect("FATAL: Could not set resolution");
+    let mut canvas = window.into_canvas().present_vsync().build()?;
+    canvas.set_logical_size(640, 400)?;
 
-    let mut cursor_s = sdl2::surface::Surface::load_bmp_rw(&mut sdl2::rwops::RWops::from_bytes(include_bytes!("resources/cursor.bmp")).expect("FATAL: Could not load resources/cursor.bmp")).expect("FATAL: Could not create surface");
-    let _ = cursor_s.set_color_key(true, sdl2::pixels::Color::RGB(255, 0, 255));
-    let cursor = sdl2::mouse::Cursor::from_surface(&cursor_s, 0, 0).expect("FATAL: Could not create cursor");
-    cursor.set();
+    load_cursor()?;
     //sdl_context.mouse().show_cursor(false);
 
     let mut w = GameState::new();
-    w.register_component::<Position>();
+
     w.register_component::<Velocity>();
     w.register_component::<Enemy>();
     w.register_component::<Player>();
-    w.register_component::<Name>();
-    w.register_component::<RenderInfo>();
+    common::init(&mut w);
     stats::init(&mut w);
     inventory::init(&mut w);
     //w.register_component::<Weapon>();
@@ -131,28 +144,34 @@ fn main() {
         w.insert(e, Position{x: f64::from(i) * 32.0, y: 10.0});
         w.insert(e, Name("enemy"));
         w.insert(e, RenderInfo("enemy"));
-        w.insert(e, inventory::Consumable::new(vec![(stats::VITALITY, 3)]));
-        w.insert(e, inventory::ActiveEffect::new(vec![(stats::VITALITY, -3)]));
-        if i == 9 {
-            inventory::add_item(&w, p, e);
-            println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
-            println!("should be 29: {}", stats::get_max(&w, p, stats::VITALITY));
-            //inventory::remove_item(&w, p, e);
-            inventory::consume(&w, p, e);
-            w.insert(e, RenderInfo("player"));
-            println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
-            println!("should be 35: {}", stats::get_max(&w, p, stats::VITALITY));
-        }
     }
 
-    let mut event_pump = sdl_context.event_pump().expect("FATAL: Could not get events");
+
+    //TODO: move this into 'tests' mod of 'inventory'
+    let e = w.create_entity();
+    w.insert(e, RenderInfo("enemy"));
+    w.insert(e, Name("Inventory Test Entity"));
+    w.insert(e, Position{x: 200.0, y: 300.0});
+    w.insert(e, inventory::Consumable::new(vec![(stats::VITALITY, 3)]));
+    w.insert(e, inventory::ActiveEffect::new(vec![(stats::VITALITY, -3)]));
+    inventory::add_item(&w, p, e);
+    println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
+    println!("should be 29: {}", stats::get_max(&w, p, stats::VITALITY));
+    inventory::remove_item(&w, p, e);
+    //inventory::consume(&w, p, e);
+    println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
+    println!("should be 35: {}", stats::get_max(&w, p, stats::VITALITY));
+    
+    let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
         canvas.set_draw_color(sdl2::pixels::Color::RGB(60, 44, 56));
         canvas.clear();
+        use sdl2::event::Event;
+        use sdl2::keyboard::Keycode;
         for event in event_pump.poll_iter() {
             match event {
-                sdl2::event::Event::Quit {..} |
-                sdl2::event::Event::KeyDown { keycode: Some(sdl2::keyboard::Keycode::Escape), .. } => {
+                Event::Quit{..} |
+                Event::KeyDown{keycode: Some(Keycode::Escape), ..} => {
                     break 'running
                 },
                 _ => {}
@@ -178,19 +197,21 @@ fn main() {
         });
         
         //rendering system :3
+        use sdl2::pixels::Color;
+        use sdl2::rect::Rect;
         for &i in w.iter() {
             if w.is_deleted(i) { //this logic should be integral to how `world` works; will move soon
                 continue;
             }
             if let Some(Position{x, y}) = w.get(i) {
-                let mut color = sdl2::pixels::Color::RGB(0, 0, 0);
-                let mut rect = sdl2::rect::Rect::new(x as i32, y as i32, 16, 16);
+                let mut color = Color::RGB(0, 0, 0);
+                let mut rect = Rect::new(x as i32, y as i32, 16, 16);
                 match w.get::<RenderInfo>(i) {
                     Some(RenderInfo("enemy")) => {
-                        color = sdl2::pixels::Color::RGB(255, 0, 0);
+                        color = Color::RGB(255, 0, 0);
                     }
                     Some(RenderInfo("player")) => {
-                        color = sdl2::pixels::Color::RGB(0, 255, 0);
+                        color = Color::RGB(0, 255, 0);
                         rect.set_width(32);
                         rect.set_height(32);
                     }
@@ -206,4 +227,5 @@ fn main() {
     }
 
     println!("Goodbye!!");
+    Ok(())
 }
