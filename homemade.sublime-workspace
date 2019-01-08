@@ -1,0 +1,439 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"In",
+				"Intelligence"
+			],
+			[
+				"i",
+				"i                              Hewwo                                    ν"
+			],
+			[
+				"input",
+				"inputStream"
+			],
+			[
+				"me",
+				"memberLogin"
+			],
+			[
+				"Scanner",
+				"scanner"
+			],
+			[
+				"stru",
+				"struct\tstruct … { … }"
+			],
+			[
+				"s",
+				"struct-unit\tstruct …;"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "src/main.rs",
+			"settings":
+			{
+				"buffer_size": 7342,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"pull",
+				"Git: Pull"
+			],
+			[
+				"reset",
+				"Git: Reset (unstage) All"
+			],
+			[
+				"commit",
+				"Git: Commit"
+			],
+			[
+				"status",
+				"Git: Status"
+			],
+			[
+				":w",
+				":w - Save"
+			],
+			[
+				"git commit",
+				"Git: Commit history"
+			],
+			[
+				"set syntax rust",
+				"Set Syntax: Rust Enhanced"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"clippy",
+				"Build With: RustEnhanced - Clippy"
+			],
+			[
+				"instlal",
+				"Package Control: Install Package"
+			],
+			[
+				"color",
+				"Preferences: Terminal View: Color Scheme"
+			],
+			[
+				"format",
+				"Snippet: format!(…)"
+			],
+			[
+				"conf",
+				"Rust: Configure Cargo Build"
+			],
+			[
+				"build",
+				"Build With: RustEnhanced"
+			],
+			[
+				"configure",
+				"Rust: Configure Cargo Build"
+			],
+			[
+				"install packge",
+				"Package Control: Install Package"
+			],
+			[
+				"install package",
+				"Package Control: Install Package"
+			],
+			[
+				"package",
+				"Install Package Control"
+			],
+			[
+				"reinstall",
+				"Package Control: Advanced Install Package"
+			],
+			[
+				"go run",
+				"Build With: Go - Run"
+			],
+			[
+				"upgrade",
+				"Package Control: Upgrade/Overwrite All Packages"
+			],
+			[
+				"package up",
+				"Package Control: Upgrade/Overwrite All Packages"
+			],
+			[
+				"gotoo",
+				"GoTools: Format"
+			],
+			[
+				"remove pack",
+				"Package Control: Remove Package"
+			],
+			[
+				"ascii",
+				"ASCII Decorator: Font Selector"
+			],
+			[
+				"install pack",
+				"Package Control: Install Package"
+			],
+			[
+				"go",
+				"GoTools: Format"
+			],
+			[
+				"remove packa",
+				"Package Control: Remove Package"
+			],
+			[
+				"instal pack",
+				"Package Control: Install Package"
+			],
+			[
+				"orgmode",
+				"Set Syntax: orgmode"
+			],
+			[
+				"lsp",
+				"LSP: Enable Language Server in Project"
+			],
+			[
+				"synt",
+				"Set Syntax: Go"
+			],
+			[
+				"test",
+				"GoSublime: Run Tests"
+			],
+			[
+				":run",
+				"GoSublime: Run build command"
+			],
+			[
+				"remo",
+				"Package Control: Remove Repository"
+			],
+			[
+				"remove rep",
+				"Package Control: Remove Repository"
+			],
+			[
+				"add rep",
+				"Package Control: Add Repository"
+			],
+			[
+				"rust",
+				"Build With: Rust"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 0.0,
+		"history":
+		[
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/home/kay/Desktop/homemade",
+		"/home/kay/Desktop/homemade/src"
+	],
+	"file_history":
+	[
+		"/home/kay/.ssh/id_rsa.pub",
+		"/home/kay/Desktop/homemade/src/storage/hashmap.rs",
+		"/home/kay/Desktop/homemade/src/storage/vec.rs",
+		"/home/kay/Desktop/tupletypes.rs",
+		"/home/kay/Desktop/homemade/src/world.rs",
+		"/home/kay/Desktop/homemade/Cargo.toml",
+		"/home/kay/Desktop/homemade/component_derive/src/lib.rs",
+		"/home/kay/Desktop/homemade/src/lib.rs",
+		"/home/kay/Desktop/homemade/component_derive/Cargo.toml",
+		"/home/kay/Desktop/pointer.rs",
+		"/home/kay/Desktop/hewwo.py",
+		"/home/kay/Desktop/homemade/src/storage/mod.rs",
+		"/home/kay/Desktop/homemade/src/storage/btreemap.rs",
+		"/home/kay/Desktop/homemade/src/storage/hashmapstorage.rs",
+		"/home/kay/Desktop/homemade/src/storage/vecstorage.rs",
+		"/home/kay/Desktop/homemade/src/storage/btreemapstorage.rs",
+		"/home/kay/Desktop/hewwo.go",
+		"/home/kay/Desktop/homemade/homemade.sublime-project",
+		"/home/kay/Desktop/gayos/build.sh",
+		"/home/kay/Dropbox/notes/1301.011-History.org",
+		"/home/kay/Desktop/frontpage/Web.toml",
+		"/home/kay/Desktop/frontpage/Cargo.toml",
+		"/home/kay/Desktop/traitbounds.rs",
+		"/home/kay/Desktop/inheritance.rs",
+		"/home/kay/.config/sublime-text-3/Packages/User/ASCII Decorator.sublime-settings",
+		"/home/kay/.config/sublime-text-3/Packages/ASCII-Decorator/ASCII Decorator.sublime-settings",
+		"/home/kay/.config/sublime-text-3/Packages/JavaImports/JavaImports.sublime-settings",
+		"/home/kay/.config/sublime-text-3/Packages/User/Default (Linux).sublime-keymap",
+		"/home/kay/.config/sublime-text-3/Packages/GitGutter/Default.sublime-keymap",
+		"/home/kay/Desktop/JDBCProj/Main.java",
+		"/home/kay/Desktop/JDBCProj/JDBCProj.sublime-project",
+		"/home/kay/Desktop/JDBCProj/untitled.sublime-workspace",
+		"/home/kay/Desktop/JDBCProj/JDBCProj.sublime-workspace",
+		"/home/kay/.config/sublime-text-3/Packages/User/golang.sublime-settings",
+		"/home/kay/Desktop/temp-hist-2.org",
+		"/home/kay/Desktop/gotst/hewwo",
+		"/home/kay/.config/sublime-text-3/Packages/User/GoSublime/src/margo/margo.go",
+		"/home/kay/.config/sublime-text-3/Packages/GoSublime/CHANGELOG.md",
+		"/home/kay/.config/sublime-text-3/Packages/GoSublime/9o.md",
+		"/home/kay/Desktop/gotst/hewwo.go",
+		"/home/kay/Desktop/hello-world/src/src/main.rs",
+		"/home/kay/Desktop/hello-world/src/main.rs"
+	],
+	"find":
+	{
+		"height": 41.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "src/main.rs",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 7342,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								7342,
+								7342
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust Enhanced/RustEnhanced.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 3622.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 26.0
+	},
+	"input":
+	{
+		"height": 38.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.git":
+	{
+		"height": 120.0
+	},
+	"pinned_build_system": "",
+	"project": "homemade.sublime-project",
+	"replace":
+	{
+		"height": 48.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"~/Desktop/homemade/homemade.sublime-project"
+			]
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 228.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
