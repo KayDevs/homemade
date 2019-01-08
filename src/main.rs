@@ -228,5 +228,6 @@ fn main() -> Result<(), Box<std::error::Error>> {
         //std::thread::sleep(std::time::Duration::from_secs(2));
     }
 
+    println!("Goodbye!!");
     Ok(())
 }
