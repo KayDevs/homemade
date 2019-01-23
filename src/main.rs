@@ -6,7 +6,7 @@ use homemade::common;
 use homemade::common::{Name, Position, RenderInfo};
 use homemade::inventory;
 use homemade::stats;
-use std::error::Error;
+use failure::{Fail, Error};
 
 #[derive(Clone)]
 struct Player;
@@ -75,7 +75,7 @@ use sdl2::surface::Surface;
 use sdl2::pixels::Color;
 use sdl2::rwops::RWops;
 use sdl2::mouse::Cursor;
-fn load_cursor() -> Result<(), Box<dyn Error>> {
+fn load_cursor() -> Result<(), Error> {
     let mut rwops = RWops::from_bytes(resources::CURSOR)?;
     let mut surface = Surface::load_bmp_rw(&mut rwops)?;
     surface.set_color_key(true, Color::RGB(255, 0, 255))?;
@@ -85,7 +85,7 @@ fn load_cursor() -> Result<(), Box<dyn Error>> {
 }
 
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Error> {
 
     let sdl_context = sdl2::init()?;
     let video = sdl_context.video()?;
