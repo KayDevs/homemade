@@ -27,6 +27,8 @@ pub trait Component: 'static + Sized + Clone {
     type Storage: ComponentStorage<Self>;
 }
 
+pub trait Resource: 'static + Sized + Clone {}
+
 use crate::storage::BTreeMapStorage;
 #[derive(Clone)]
 pub struct Deleted;
@@ -38,14 +40,23 @@ impl Component for Deleted {
 pub struct GameState {
     entities: Vec<Entity>,
     world: HashMap<TypeId, Box<Any>>,
+    resources: HashMap<TypeId, Box<Any>>,
 }
 
 impl GameState {
     pub fn new() -> GameState {
-        let mut w = GameState{entities: Vec::new(), world: HashMap::new()};
+        let mut w = GameState{entities: Vec::new(), world: HashMap::new(), resources: HashMap::new()};
         w.register_component::<Deleted>();
         w
     }
+
+    pub fn set_resource<R: Resource>(&mut self, resource: R) {
+        self.resources.insert(TypeId::of::<R>(), Box::new(resource));
+    }
+    pub fn get_resource<R: Resource>(&self) -> Option<R> {
+        self.resources.get(&TypeId::of::<R>()).map(|r| r.downcast_ref::<R>().unwrap().clone())
+    }
+
     pub fn register_component<C: Component>(&mut self) {
         //wrap up Storage in a RWLock for concurrency :3
         self.world.insert(TypeId::of::<C>(), Box::new(RwLock::new(C::Storage::new())));
@@ -58,8 +69,11 @@ impl GameState {
     pub fn delete_entity(&self, entity: Entity) {
         self.insert(entity, Deleted);
     }
+    pub fn is_alive(&self, entity: Entity) -> bool {
+        self.read::<Deleted>().get(entity).is_none()
+    }
     pub fn is_deleted(&self, entity: Entity) -> bool {
-        self.get::<Deleted>(entity).is_some()
+        self.read::<Deleted>().get(entity).is_some()
     }
 
     #[allow(unused)]
@@ -91,42 +105,63 @@ impl GameState {
     
     //returns copies, for simple value reading
     //maybe these functions are a little too misleading...?
-    pub fn get<C: Component>(&self, entity: Entity) -> Option<C> {
-        self.read::<C>().get(entity).cloned()
+    /*fn get<C: Component>(&self, entity: Entity) -> Option<C> {
+        if self.is_alive(entity) {
+            self.read::<C>().get(entity).cloned()
+        } else {
+            None
+        }
     }
-    pub fn get_value<C: Component>(&self, entity: Entity) -> C {
+    //unsafe function
+    fn get_value<C: Component>(&self, entity: Entity) -> C {
         self.read::<C>().get(entity).unwrap().clone()
-    }
+    }*/
 
     //takes a closure, updates select components
     pub fn update_all<C: Component>(&self, mut f: impl FnMut(Entity, &mut C)) {
+        let mut write = self.write::<C>();
         for &e in self.iter() {
-            if let Some(c) = self.write::<C>().get_mut(e) {
+            if let Some(c) = write.get_mut(e) {
                 f(e, c);
             }
         }
     }
     pub fn update<C: Component>(&self, entity: Entity, mut f: impl FnMut(&mut C)) {
-        if let Some(c) = self.write::<C>().get_mut(entity) {
-            f(c);
+        if self.is_alive(entity) {
+            if let Some(c) = self.write::<C>().get_mut(entity) {
+                f(c);
+            }
         }
     }
 
     pub fn all<C: Component>(&self, f: impl Fn(Entity, &C)) {
+        let read = self.read::<C>();
         for &e in self.iter() {
-            if let Some(c) = self.read::<C>().get(e) {
+            if let Some(c) = read.get(e) {
                 f(e, c);
+            }
+        }
+    }
+    pub fn one<C: Component>(&self, entity: Entity, f: impl Fn(&C)) {
+        if self.is_alive(entity) {
+            if let Some(c) = self.write::<C>().get(entity) {
+                f(c);
             }
         }
     }
 
     //just a simple check for flag-type components
     pub fn has_flag<C: Component>(&self, entity: Entity) -> bool {
-        self.read::<C>().get(entity).is_some()
+        if self.is_alive(entity) {
+            self.read::<C>().get(entity).is_some()
+        } else {
+            false
+        }
     }
     
-    pub fn iter(&self) -> std::slice::Iter<Entity> {
-        self.entities.iter()
+    //easily iterate only over live entities
+    fn iter(&self) -> impl Iterator<Item=&Entity> {
+        self.entities.iter().filter(move |&e| self.is_alive(*e))
     }
 }
 

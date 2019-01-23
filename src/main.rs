@@ -6,6 +6,7 @@ use homemade::common;
 use homemade::common::{Name, Position, RenderInfo};
 use homemade::inventory;
 use homemade::stats;
+use std::error::Error;
 
 #[derive(Clone)]
 struct Player;
@@ -74,7 +75,7 @@ use sdl2::surface::Surface;
 use sdl2::pixels::Color;
 use sdl2::rwops::RWops;
 use sdl2::mouse::Cursor;
-fn load_cursor() -> Result<(), Box<std::error::Error>> {
+fn load_cursor() -> Result<(), Box<dyn Error>> {
     let mut rwops = RWops::from_bytes(resources::CURSOR)?;
     let mut surface = Surface::load_bmp_rw(&mut rwops)?;
     surface.set_color_key(true, Color::RGB(255, 0, 255))?;
@@ -84,7 +85,7 @@ fn load_cursor() -> Result<(), Box<std::error::Error>> {
 }
 
 
-fn main() -> Result<(), Box<std::error::Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
 
     let sdl_context = sdl2::init()?;
     let video = sdl_context.video()?;
@@ -157,8 +158,8 @@ fn main() -> Result<(), Box<std::error::Error>> {
     inventory::add_item(&w, p, e);
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 29: {}", stats::get_max(&w, p, stats::VITALITY));
-    inventory::remove_item(&w, p, e);
-    //inventory::consume(&w, p, e);
+    //inventory::remove_item(&w, p, e);
+    inventory::consume(&w, p, e);
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 35: {}", stats::get_max(&w, p, stats::VITALITY));
     
@@ -199,12 +200,31 @@ fn main() -> Result<(), Box<std::error::Error>> {
         });
         
         //rendering system :3
+        //TODO: animation system, render according to seconds 
+        // maybe store a start_time on every .reset() and then do current_frame = (seconds_passed - start_time) % num_frames;
+        //TODO: rendering system, render according to physical units and not pixels
         use sdl2::pixels::Color;
         use sdl2::rect::Rect;
-        for &i in w.iter() {
-            if w.is_deleted(i) { //this logic should be integral to how `world` works; will move soon
-                continue;
-            }
+        w.update_all(|e, &mut Position{x, y}| {
+            let mut color = Color::RGB(0, 0, 0);
+            let mut rect = Rect::new(x as i32, y as i32, 16, 16);
+            w.update(e, |&mut RenderInfo(info)| {
+                match info {
+                    "enemy" => {
+                        color = Color::RGB(255, 0, 0);
+                    }
+                    "player" => {
+                        color = Color::RGB(0, 255, 0);
+                        rect.set_width(32);
+                        rect.set_height(32);
+                    }
+                    _ => {}
+                }
+            });
+            canvas.set_draw_color(color);
+            let _ = canvas.fill_rect(rect);
+        });
+        /*for &i in w.iter() {
             if let Some(Position{x, y}) = w.get(i) {
                 let mut color = Color::RGB(0, 0, 0);
                 let mut rect = Rect::new(x as i32, y as i32, 16, 16);
@@ -224,7 +244,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 let _ = canvas.fill_rect(rect);
             }
         }
-        canvas.present();
+        canvas.present();*/
         //std::thread::sleep(std::time::Duration::from_secs(2));
     }
 

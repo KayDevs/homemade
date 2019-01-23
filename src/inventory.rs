@@ -143,17 +143,15 @@ pub fn init(w: &mut GameState) {
 }
 pub fn add_item(w: &GameState, entity: Entity, item: Entity) {
     w.update(entity, |inv: &mut Inventory| {
-        if let Some(_pos) = w.get::<Position>(item) {
+        w.update(item, |_: &mut Position| {
             w.delete::<Position>(item);
-        }
+        });
         inv.items.push(item);
         w.update(item, |a: &mut ActiveEffect| {
             for buff in &a.buffs {
-                if let Some(Name(name)) = w.get::<Name>(item) {
+                w.update(item, |Name(name)| {
                     stats::buff(w, entity, buff.0, name, buff.1);
-                } else {
-                    panic!("ActiveEffect items must have Name");
-                }
+                });
             }
         });
     });
@@ -164,15 +162,16 @@ pub fn remove_item(w: &GameState, entity: Entity, item: Entity) {
             if inv.items[i] == item {
                 inv.items.remove(i);
                 w.update(item, |_: &mut ActiveEffect| {
-                    if let Some(Name(name)) = w.get::<Name>(item) {
+                    w.update(item, |Name(name)| {
                         stats::unbuff(w, entity, name);
-                    }
+                    });
                 });
             }
         }
-        if let Some(pos) = w.get::<Position>(entity) {
-            w.insert(item, pos);
-        }
+        w.update(entity, |pos: &mut Position| {
+            w.insert(item, pos.clone());
+        });
+
     });
 }
 pub fn consume(w: &GameState, entity: Entity, item: Entity) {
@@ -182,19 +181,22 @@ pub fn consume(w: &GameState, entity: Entity, item: Entity) {
                 s.quantity -= 1;
                 if s.quantity <= 0 {
                     remove_item(w, entity, item);
+                    for buff in &c.buffs {
+                        w.update(item, |Name(name)| {
+                            stats::buff(w, entity, buff.0, name, buff.1);
+                        });
+                    }
                     w.delete_entity(item);
                 }
             });
         } else {
             remove_item(w, entity, item);
-            w.delete_entity(item);
-        }
-        for buff in &c.buffs {
-            if let Some(Name(name)) = w.get::<Name>(item) {
-                stats::buff(w, entity, buff.0, name, buff.1);
-            } else {
-                panic!("Consumable items must have Name");
+            for buff in &c.buffs {
+                w.update(item, |Name(name)| {
+                    stats::buff(w, entity, buff.0, name, buff.1);
+                });
             }
+            w.delete_entity(item);
         }
     });
 }

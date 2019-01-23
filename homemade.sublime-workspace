@@ -39,15 +39,109 @@
 			"file": "src/main.rs",
 			"settings":
 			{
-				"buffer_size": 7342,
+				"buffer_size": 8223,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/stats.rs",
+			"settings":
+			{
+				"buffer_size": 6729,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "src/world/src/world.rs",
+			"settings":
+			{
+				"buffer_size": 7018,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": " \n",
+			"settings":
+			{
+				"buffer_size": 2,
+				"line_ending": "Unix",
+				"name": "Terminal",
+				"read_only": true,
+				"scratch": true
+			}
+		},
+		{
+			"file": "Cargo.toml",
+			"settings":
+			{
+				"buffer_size": 413,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		}
 	],
-	"build_system": "",
+	"build_system": "Packages/Rust Enhanced/RustEnhanced.sublime-build",
 	"build_system_choices":
 	[
+		[
+			[
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					""
+				],
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					"Automatic"
+				],
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					"Run"
+				],
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					"Run (with args)..."
+				],
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					"Check"
+				],
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					"Test"
+				],
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					"Test (with args)..."
+				],
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					"Bench"
+				],
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					"Clean"
+				],
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					"Document"
+				],
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					"Clippy"
+				],
+				[
+					"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+					"Script"
+				]
+			],
+			[
+				"Packages/Rust Enhanced/RustEnhanced.sublime-build",
+				"Automatic"
+			]
+		]
 	],
 	"build_varint": "",
 	"command_palette":
@@ -57,20 +151,40 @@
 		"selected_items":
 		[
 			[
+				"rusten",
+				"Build With: RustEnhanced"
+			],
+			[
+				"branch",
+				"Git: Delete Branch"
+			],
+			[
+				"status",
+				"Git: Status"
+			],
+			[
+				"delete",
+				"Git: Delete Branch"
+			],
+			[
 				"pull",
 				"Git: Pull"
 			],
 			[
-				"reset",
-				"Git: Reset (unstage) All"
+				"push",
+				"Git: Push"
+			],
+			[
+				"quick",
+				"Git: Quick Commit (repo)"
 			],
 			[
 				"commit",
 				"Git: Commit"
 			],
 			[
-				"status",
-				"Git: Status"
+				"reset",
+				"Git: Reset (unstage) All"
 			],
 			[
 				":w",
@@ -230,10 +344,14 @@
 	"expanded_folders":
 	[
 		"/home/kay/Desktop/homemade",
-		"/home/kay/Desktop/homemade/src"
+		"/home/kay/Desktop/homemade/src",
+		"/home/kay/Desktop/homemade/src/world",
+		"/home/kay/Desktop/homemade/src/world/src"
 	],
 	"file_history":
 	[
+		"/home/kay/Desktop/homemade/src/inventory.rs",
+		"/home/kay/Desktop/homemade/src/stats.rs",
 		"/home/kay/.ssh/id_rsa.pub",
 		"/home/kay/Desktop/homemade/src/storage/hashmap.rs",
 		"/home/kay/Desktop/homemade/src/storage/vec.rs",
@@ -279,7 +397,7 @@
 	],
 	"find":
 	{
-		"height": 41.0
+		"height": 26.0
 	},
 	"find_in_files":
 	{
@@ -293,6 +411,9 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"});\n",
+			"update",
+			"Stats"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -310,7 +431,7 @@
 	"groups":
 	[
 		{
-			"selected": 0,
+			"selected": 1,
 			"sheets":
 			[
 				{
@@ -319,15 +440,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 7342,
+						"buffer_size": 8223,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								7342,
-								7342
+								7964,
+								7964
 							]
 						],
 						"settings":
@@ -337,10 +458,162 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 3622.0,
+						"translation.y": 3553.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "src/stats.rs",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6729,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1039,
+								1039
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust Enhanced/RustEnhanced.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 459.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "src/world/src/world.rs",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 7018,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4497,
+								4497
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Rust Enhanced/RustEnhanced.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1968.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2,
+						"regions":
+						{
+							"2,0":
+							{
+								"flags": 272,
+								"regions":
+								[
+									[
+										2,
+										2
+									]
+								],
+								"scope": "terminalview.black_green"
+							}
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"auto_complete": false,
+							"auto_complete_commit_on_tab": false,
+							"caret_style": "blink",
+							"color_scheme": "Packages/TerminalView/TerminalView.hidden-tmTheme",
+							"draw_centered": false,
+							"draw_indent_guides": false,
+							"draw_white_space": "none",
+							"gutter": false,
+							"highlight_line": false,
+							"scroll_past_end": false,
+							"syntax": "Packages/Text/Plain text.tmLanguage",
+							"terminal_view": true,
+							"terminal_view_activate_args":
+							{
+								"cmd": "/bin/bash -l",
+								"cwd": "/home/kay/Desktop/homemade/src",
+								"keep_open": false,
+								"syntax": null,
+								"title": "Terminal"
+							},
+							"terminal_view_last_cursor_pos":
+							[
+								0,
+								0
+							],
+							"word_wrap": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "Cargo.toml",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 413,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								100,
+								100
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/TOML/TOML.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 102.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
 					"type": "text"
 				}
 			]
@@ -377,6 +650,10 @@
 		]
 	},
 	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 120.0
+	},
 	"output.find_results":
 	{
 		"height": 0.0

@@ -37,6 +37,8 @@ pub fn init(w: &mut GameState) {
     w.register_component::<Health>();
 }
 
+
+/*TODO: migrate this to entirely 'update' syntax*/
 pub fn set_base(w: &GameState, i: Entity, stat: Stat, value: i32) {
     match w.get::<Stats>(i) {
         Some(Stats(ref mut stats)) => {
