@@ -105,7 +105,7 @@ impl GameState {
     
     //returns copies, for simple value reading
     //maybe these functions are a little too misleading...?
-    /*fn get<C: Component>(&self, entity: Entity) -> Option<C> {
+    pub fn get<C: Component>(&self, entity: Entity) -> Option<C> {
         if self.is_alive(entity) {
             self.read::<C>().get(entity).cloned()
         } else {
@@ -113,9 +113,9 @@ impl GameState {
         }
     }
     //unsafe function
-    fn get_value<C: Component>(&self, entity: Entity) -> C {
+    pub fn get_value<C: Component>(&self, entity: Entity) -> C {
         self.read::<C>().get(entity).unwrap().clone()
-    }*/
+    }
 
     //takes a closure, updates select components
     pub fn update_all<C: Component>(&self, mut f: impl FnMut(Entity, &mut C)) {
