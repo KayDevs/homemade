@@ -40,7 +40,7 @@ pub fn init(w: &mut GameState) {
 
 /*TODO: migrate this to entirely 'update' syntax*/
 pub fn set_base(w: &GameState, i: Entity, stat: Stat, value: i32) {
-    match w.get::<Stats>(i) {
+    match w.clone::<Stats>(i) {
         Some(Stats(ref mut stats)) => {
             let s = stats.entry(stat).or_insert(HashMap::new());
             s.insert(None, value);
@@ -68,7 +68,7 @@ or it does not have a base stat for the stat you're looking for,
 then this function will return zero.
 */ 
 pub fn get_base(w: &GameState, i: Entity, stat: Stat) -> i32 {
-    if let Some(Stats(stats)) = w.get(i) {
+    if let Some(Stats(stats)) = w.clone(i) {
         if let Some(s) = stats.get(&stat) {
             if let Some(s) = s.get(&None) {
                 return s.clone();
@@ -79,7 +79,7 @@ pub fn get_base(w: &GameState, i: Entity, stat: Stat) -> i32 {
 }
 //gets sum of base stat + all buffs/debuffs
 pub fn get_max(w: &GameState, i: Entity, stat: Stat) -> i32 {
-    if let Some(Stats(stats)) = w.get(i) {
+    if let Some(Stats(stats)) = w.clone(i) {
         if let Some(s) = stats.get(&stat) {
             let mut base = 0;
             for i in s.values() {
@@ -96,10 +96,10 @@ pub fn get_max(w: &GameState, i: Entity, stat: Stat) -> i32 {
 //otherwise operate on the stat itself
 //if it doesn't even have the stat, return 0 and don't do anything
 pub fn get(w: &GameState, i: Entity, stat: Stat) -> i32 {
-    if let Some(Stats(stats)) = w.get(i) {
+    if let Some(Stats(stats)) = w.clone(i) {
         match stat {
             VITALITY => {
-                if let Some(Health(hp)) = w.get::<Health>(i) {
+                if let Some(Health(hp)) = w.clone::<Health>(i) {
                     return hp;
                 }
             }

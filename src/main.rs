@@ -6,7 +6,7 @@ use homemade::common;
 use homemade::common::{Name, Position, RenderInfo};
 use homemade::inventory;
 use homemade::stats;
-use failure::{Fail, Error};
+use std::error::Error;
 
 #[derive(Clone)]
 struct Player;
@@ -75,7 +75,7 @@ use sdl2::surface::Surface;
 use sdl2::pixels::Color;
 use sdl2::rwops::RWops;
 use sdl2::mouse::Cursor;
-fn load_cursor() -> Result<(), Error> {
+fn load_cursor() -> Result<(), Box<Error>> {
     let mut rwops = RWops::from_bytes(resources::CURSOR)?;
     let mut surface = Surface::load_bmp_rw(&mut rwops)?;
     surface.set_color_key(true, Color::RGB(255, 0, 255))?;
@@ -85,8 +85,7 @@ fn load_cursor() -> Result<(), Error> {
 }
 
 
-fn main() -> Result<(), Error> {
-
+fn main() -> Result<(), Box<Error>> {
     let sdl_context = sdl2::init()?;
     let video = sdl_context.video()?;
     let window = video.window("rust-sdl2 demo", 640, 400)
@@ -94,13 +93,18 @@ fn main() -> Result<(), Error> {
     .fullscreen_desktop()
     .build()?;
 
+    println!("window created...");
+
     let mut canvas = window.into_canvas().present_vsync().build()?;
     canvas.set_logical_size(640, 400)?;
+
+    println!("canvas created...");
 
     load_cursor()?;
     //sdl_context.mouse().show_cursor(false);
 
     let mut w = GameState::new();
+    println!("new gamestate...");
 
     w.register_component::<Velocity>();
     w.register_component::<Enemy>();
@@ -158,10 +162,11 @@ fn main() -> Result<(), Error> {
     inventory::add_item(&w, p, e);
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 29: {}", stats::get_max(&w, p, stats::VITALITY));
-    //inventory::remove_item(&w, p, e);
-    inventory::consume(&w, p, e);
+    inventory::remove_item(&w, p, e);
+    //inventory::consume(&w, p, e);
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 35: {}", stats::get_max(&w, p, stats::VITALITY));
+    println!("starting main loop...");
     
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -243,8 +248,8 @@ fn main() -> Result<(), Error> {
                 canvas.set_draw_color(color);
                 let _ = canvas.fill_rect(rect);
             }
-        }
-        canvas.present();*/
+        }*/
+        canvas.present();
         //std::thread::sleep(std::time::Duration::from_secs(2));
     }
 

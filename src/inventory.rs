@@ -143,11 +143,15 @@ pub fn init(w: &mut GameState) {
 }
 pub fn add_item(w: &GameState, entity: Entity, item: Entity) {
     w.update(entity, |inv: &mut Inventory| {
-        w.update(item, |_: &mut Position| {
+        if w.has_flag::<Position>(item) {
             w.delete::<Position>(item);
-        });
+        }
         inv.items.push(item);
         w.update(item, |a: &mut ActiveEffect| {
+            if !w.has_flag::<Name>(item) {
+                println!("ActiveEffect items must have Name");
+                return;
+            }
             for buff in &a.buffs {
                 w.update(item, |Name(name)| {
                     stats::buff(w, entity, buff.0, name, buff.1);
@@ -161,6 +165,10 @@ pub fn remove_item(w: &GameState, entity: Entity, item: Entity) {
         for i in 0..inv.items.len() {
             if inv.items[i] == item {
                 inv.items.remove(i);
+                if !w.has_flag::<Name>(item) {
+                    println!("ActiveEffect items must have Name");
+                    return;
+                }
                 w.update(item, |_: &mut ActiveEffect| {
                     w.update(item, |Name(name)| {
                         stats::unbuff(w, entity, name);
@@ -168,34 +176,34 @@ pub fn remove_item(w: &GameState, entity: Entity, item: Entity) {
                 });
             }
         }
-        w.update(entity, |pos: &mut Position| {
-            w.insert(item, pos.clone());
-        });
-
+        if let Some(pos) = w.clone::<Position>(entity) {
+            w.insert(item, pos);
+        }
     });
 }
+
 pub fn consume(w: &GameState, entity: Entity, item: Entity) {
     w.update(item, |c: &mut Consumable| {
+        println!("buffing");
+        for buff in &c.buffs {
+            w.update(item, |Name(name)| {
+                stats::buff(w, entity, buff.0, name, buff.1);
+            });
+        }
+
+        println!("checking stack");
         if w.has_flag::<Stackable>(item) {
             w.update(item, |s: &mut Stackable|{
                 s.quantity -= 1;
                 if s.quantity <= 0 {
+                    println!("deleting");
                     remove_item(w, entity, item);
-                    for buff in &c.buffs {
-                        w.update(item, |Name(name)| {
-                            stats::buff(w, entity, buff.0, name, buff.1);
-                        });
-                    }
                     w.delete_entity(item);
                 }
             });
         } else {
+            println!("deleting");
             remove_item(w, entity, item);
-            for buff in &c.buffs {
-                w.update(item, |Name(name)| {
-                    stats::buff(w, entity, buff.0, name, buff.1);
-                });
-            }
             w.delete_entity(item);
         }
     });

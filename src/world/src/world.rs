@@ -70,10 +70,10 @@ impl GameState {
         self.insert(entity, Deleted);
     }
     pub fn is_alive(&self, entity: Entity) -> bool {
-        self.read::<Deleted>().get(entity).is_none()
+        self.lock_read::<Deleted>().get(entity).is_none()
     }
     pub fn is_deleted(&self, entity: Entity) -> bool {
-        self.read::<Deleted>().get(entity).is_some()
+        self.lock_read::<Deleted>().get(entity).is_some()
     }
 
     #[allow(unused)]
@@ -94,57 +94,57 @@ impl GameState {
         self.get_storage::<C>().write().unwrap().insert(entity, c);
     }
     pub fn delete<C: Component>(&self, entity: Entity) {
-        self.write::<C>().delete(entity);
+        self.lock_write::<C>().delete(entity);
     }
-    fn read<C: Component>(&self) -> impl Deref<Target=impl ComponentStorage<C>> + '_ {
+    fn lock_read<C: Component>(&self) -> impl Deref<Target=impl ComponentStorage<C>> + '_ {
         self.get_storage::<C>().read().unwrap()
     }
-    fn write<C: Component>(&self) -> impl DerefMut<Target=impl ComponentStorage<C>> + '_ {
+    fn lock_write<C: Component>(&self) -> impl DerefMut<Target=impl ComponentStorage<C>> + '_ {
         self.get_storage::<C>().write().unwrap()
     }
     
     //returns copies, for simple value reading
     //maybe these functions are a little too misleading...?
-    pub fn get<C: Component>(&self, entity: Entity) -> Option<C> {
+    pub fn clone<C: Component>(&self, entity: Entity) -> Option<C> {
         if self.is_alive(entity) {
-            self.read::<C>().get(entity).cloned()
+            self.lock_read::<C>().get(entity).cloned()
         } else {
             None
         }
     }
     //unsafe function
     pub fn get_value<C: Component>(&self, entity: Entity) -> C {
-        self.read::<C>().get(entity).unwrap().clone()
+        self.lock_read::<C>().get(entity).unwrap().clone()
     }
 
     //takes a closure, updates select components
     pub fn update_all<C: Component>(&self, mut f: impl FnMut(Entity, &mut C)) {
-        let mut write = self.write::<C>();
+        let mut lock = self.lock_write::<C>();
         for &e in self.iter() {
-            if let Some(c) = write.get_mut(e) {
+            if let Some(c) = lock.get_mut(e) {
                 f(e, c);
             }
         }
     }
     pub fn update<C: Component>(&self, entity: Entity, mut f: impl FnMut(&mut C)) {
         if self.is_alive(entity) {
-            if let Some(c) = self.write::<C>().get_mut(entity) {
+            if let Some(c) = self.lock_write::<C>().get_mut(entity) {
                 f(c);
             }
         }
     }
 
-    pub fn all<C: Component>(&self, f: impl Fn(Entity, &C)) {
-        let read = self.read::<C>();
+    pub fn read_all<C: Component>(&self, f: impl Fn(Entity, &C)) {
+        let lock = self.lock_read::<C>();
         for &e in self.iter() {
-            if let Some(c) = read.get(e) {
+            if let Some(c) = lock.get(e) {
                 f(e, c);
             }
         }
     }
-    pub fn one<C: Component>(&self, entity: Entity, f: impl Fn(&C)) {
+    pub fn read<C: Component>(&self, entity: Entity, f: impl Fn(&C)) {
         if self.is_alive(entity) {
-            if let Some(c) = self.write::<C>().get(entity) {
+            if let Some(c) = self.lock_write::<C>().get(entity) {
                 f(c);
             }
         }
@@ -153,7 +153,7 @@ impl GameState {
     //just a simple check for flag-type components
     pub fn has_flag<C: Component>(&self, entity: Entity) -> bool {
         if self.is_alive(entity) {
-            self.read::<C>().get(entity).is_some()
+            self.lock_read::<C>().get(entity).is_some()
         } else {
             false
         }
@@ -178,7 +178,7 @@ macro_rules! impl_system {
             #[allow(non_snake_case)] //required until rust has ident_lowercase! or smth
             fn run(&self, mut f: F) {
                 for &i in self.iter() {
-                    if let ($(Some($tp)),*,) = ($(self.write::<$tp>().get_mut(i)),*,) {
+                    if let ($(Some($tp)),*,) = ($(self.lock_write::<$tp>().get_mut(i)),*,) {
                         f(($($tp),*,));
                     }
                 }
