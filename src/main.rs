@@ -162,8 +162,8 @@ fn main() -> Result<(), Box<Error>> {
     inventory::add_item(&w, p, e);
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 29: {}", stats::get_max(&w, p, stats::VITALITY));
-    inventory::remove_item(&w, p, e);
-    //inventory::consume(&w, p, e);
+    //inventory::remove_item(&w, p, e);
+    inventory::consume(&w, p, e);
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 35: {}", stats::get_max(&w, p, stats::VITALITY));
     println!("starting main loop...");

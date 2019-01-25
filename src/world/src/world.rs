@@ -77,11 +77,17 @@ impl GameState {
     }
 
     #[allow(unused)]
-    fn sweep_delete(&mut self, entity: Entity) {
-        self.entities[entity.id()].generation += 1;
-        //todo: make a free list, reuse free entity slots
-        //add a 'deleted' flag, or just simply check the free list
-        unimplemented!("cannot delete entity {}", entity.id());
+    fn sweep_delete(&mut self) {
+        let mut deleted_entities: Vec<Entity> = Vec::new();
+        self.update_all(|e, _: &mut Deleted| {
+            deleted_entities.push(e);
+        });
+        for e in deleted_entities {
+            self.entities[e.id()].generation += 1;
+            //TODO: enforce that entities of mismatched generations may not be accessed
+        }
+        //TODO: reuse free entity slots
+        unimplemented!("cannot reuse entities yet");
     }
 
     //basic crud stuff
@@ -103,8 +109,7 @@ impl GameState {
         self.get_storage::<C>().write().unwrap()
     }
     
-    //returns copies, for simple value reading
-    //maybe these functions are a little too misleading...?
+    //returns copies, for simple value reading (also doesn't lock read)
     pub fn clone<C: Component>(&self, entity: Entity) -> Option<C> {
         if self.is_alive(entity) {
             self.lock_read::<C>().get(entity).cloned()

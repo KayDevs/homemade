@@ -141,38 +141,43 @@ pub fn init(w: &mut GameState) {
     w.register_component::<ActiveEffect>();
     w.register_component::<Stackable>();
 }
+
 pub fn add_item(w: &GameState, entity: Entity, item: Entity) {
     w.update(entity, |inv: &mut Inventory| {
         if w.has_flag::<Position>(item) {
             w.delete::<Position>(item);
         }
         inv.items.push(item);
+
+        //TODO: add 'stackable' logic here 
+        //make sure that duplicate items that are stackable are stacked upon adding
+        //(how do we check that if every item is just an ID??)
+        //entities don't keep track of their own components...
+
         w.update(item, |a: &mut ActiveEffect| {
-            if !w.has_flag::<Name>(item) {
-                println!("ActiveEffect items must have Name");
-                return;
-            }
-            for buff in &a.buffs {
-                w.update(item, |Name(name)| {
+            if let Some(Name(name)) = w.clone(item) {
+                for buff in &a.buffs {
                     stats::buff(w, entity, buff.0, name, buff.1);
-                });
+                }
+            } else {
+                panic!("ActiveEffect items must have Name"); //TODO: not this
+                //maybe add a 'description' field to ActiveEffect and Consumable
             }
         });
     });
 }
+
 pub fn remove_item(w: &GameState, entity: Entity, item: Entity) {
     w.update(entity, |inv: &mut Inventory| {
         for i in 0..inv.items.len() {
             if inv.items[i] == item {
                 inv.items.remove(i);
-                if !w.has_flag::<Name>(item) {
-                    println!("ActiveEffect items must have Name");
-                    return;
-                }
                 w.update(item, |_: &mut ActiveEffect| {
-                    w.update(item, |Name(name)| {
+                    if let Some(Name(name)) = w.clone(item) {
                         stats::unbuff(w, entity, name);
-                    });
+                    } else {
+                        panic!("ActiveEffect items must have Name"); //enforce this rule
+                    }
                 });
             }
         }
@@ -184,25 +189,26 @@ pub fn remove_item(w: &GameState, entity: Entity, item: Entity) {
 
 pub fn consume(w: &GameState, entity: Entity, item: Entity) {
     w.update(item, |c: &mut Consumable| {
-        println!("buffing");
-        for buff in &c.buffs {
-            w.update(item, |Name(name)| {
+        if let Some(Name(name)) = w.clone(item) {
+            for buff in &c.buffs {
                 stats::buff(w, entity, buff.0, name, buff.1);
-            });
+            }
+        } else {
+            panic!("Consumable items must have Name");
         }
 
-        println!("checking stack");
+        //TODO: have just this line, move 'stackable' logic into 'remove_item' function itself
+        //remove_item(w, entity, item);
+
         if w.has_flag::<Stackable>(item) {
             w.update(item, |s: &mut Stackable|{
                 s.quantity -= 1;
                 if s.quantity <= 0 {
-                    println!("deleting");
                     remove_item(w, entity, item);
                     w.delete_entity(item);
                 }
             });
         } else {
-            println!("deleting");
             remove_item(w, entity, item);
             w.delete_entity(item);
         }
