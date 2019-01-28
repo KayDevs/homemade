@@ -109,7 +109,8 @@ impl GameState {
         self.get_storage::<C>().write().unwrap()
     }
     
-    //returns copies, for simple value reading (also doesn't lock read)
+    //returns copies, for simple value reading 
+    //(also doesn't lock read for the length of the returned value)
     pub fn clone<C: Component>(&self, entity: Entity) -> Option<C> {
         if self.is_alive(entity) {
             self.lock_read::<C>().get(entity).cloned()
@@ -172,7 +173,8 @@ impl GameState {
 
 
 //the big one
-//able to take a variadic number of &mut Components and run an arbitary function on ALL OF THEM
+//able to take a variadic number of &mut Components 
+//and run an arbitary function on ALL OF THEM
 pub trait SystemRunner<T, F> {
     fn run(&self, f: F);
 }

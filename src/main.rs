@@ -7,6 +7,7 @@ use homemade::common::{Name, Position, RenderInfo};
 use homemade::inventory;
 use homemade::stats;
 use std::error::Error;
+use resources::{Resources, Sprites};
 
 #[derive(Clone)]
 struct Player;
@@ -67,23 +68,9 @@ impl Component for Velocity {
     type Storage = HashMapStorage<Self>;
 }
 
-mod resources {
-    pub static CURSOR: &[u8] = include_bytes!("resources/cursor.bmp");
-}
 
-use sdl2::surface::Surface;
-use sdl2::pixels::Color;
-use sdl2::rwops::RWops;
-use sdl2::mouse::Cursor;
-fn load_cursor() -> Result<(), Box<Error>> {
-    let mut rwops = RWops::from_bytes(resources::CURSOR)?;
-    let mut surface = Surface::load_bmp_rw(&mut rwops)?;
-    surface.set_color_key(true, Color::RGB(255, 0, 255))?;
-    let cursor = Cursor::from_surface(&surface, 0, 0)?;
-    cursor.set();
-    Ok(())
-}
-
+//include all the static resources from codegen
+include!(concat!(env!("OUT_DIR"), "/resources.rs"));
 
 fn main() -> Result<(), Box<Error>> {
     let sdl_context = sdl2::init()?;
@@ -93,18 +80,15 @@ fn main() -> Result<(), Box<Error>> {
     .fullscreen_desktop()
     .build()?;
 
-    println!("window created...");
-
     let mut canvas = window.into_canvas().present_vsync().build()?;
     canvas.set_logical_size(640, 400)?;
+    canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
 
-    println!("canvas created...");
+    sdl_context.mouse().show_cursor(false);
 
-    load_cursor()?;
-    //sdl_context.mouse().show_cursor(false);
+    let mut r = Resources::new(&canvas)?;
 
     let mut w = GameState::new();
-    println!("new gamestate...");
 
     w.register_component::<Velocity>();
     w.register_component::<Enemy>();
@@ -166,12 +150,19 @@ fn main() -> Result<(), Box<Error>> {
     inventory::consume(&w, p, e);
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 35: {}", stats::get_max(&w, p, stats::VITALITY));
-    println!("starting main loop...");
     
+
+    println!("こんにしわ! starting main loop");
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
-        canvas.set_draw_color(sdl2::pixels::Color::RGB(60, 44, 56));
+        //this makes the letterboxing black on screens with different resolutions
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(0, 0, 0));
         canvas.clear();
+        //this is the actual background color
+        canvas.set_draw_color(sdl2::pixels::Color::RGB(60, 44, 56));
+        let _ = canvas.fill_rect(None);
+
+        //parse events
         use sdl2::event::Event;
         use sdl2::keyboard::Keycode;
         for event in event_pump.poll_iter() {
@@ -208,47 +199,28 @@ fn main() -> Result<(), Box<Error>> {
         //TODO: animation system, render according to seconds 
         // maybe store a start_time on every .reset() and then do current_frame = (seconds_passed - start_time) % num_frames;
         //TODO: rendering system, render according to physical units and not pixels
-        use sdl2::pixels::Color;
         use sdl2::rect::Rect;
         w.update_all(|e, &mut Position{x, y}| {
-            let mut color = Color::RGB(0, 0, 0);
             let mut rect = Rect::new(x as i32, y as i32, 16, 16);
             w.update(e, |&mut RenderInfo(info)| {
                 match info {
                     "enemy" => {
-                        color = Color::RGB(255, 0, 0);
+                        r[Sprites::Enemy].set_alpha_mod(127);
+                        let _ = canvas.copy(&r[Sprites::Enemy], None, rect);
+                        r[Sprites::Enemy].set_alpha_mod(255);
                     }
                     "player" => {
-                        color = Color::RGB(0, 255, 0);
                         rect.set_width(32);
                         rect.set_height(32);
+                        let _ = canvas.copy(&r[Sprites::Player], None, rect);
                     }
                     _ => {}
                 }
             });
-            canvas.set_draw_color(color);
-            let _ = canvas.fill_rect(rect);
         });
-        /*for &i in w.iter() {
-            if let Some(Position{x, y}) = w.get(i) {
-                let mut color = Color::RGB(0, 0, 0);
-                let mut rect = Rect::new(x as i32, y as i32, 16, 16);
-                match w.get::<RenderInfo>(i) {
-                    Some(RenderInfo("enemy")) => {
-                        color = Color::RGB(255, 0, 0);
-                    }
-                    Some(RenderInfo("player")) => {
-                        color = Color::RGB(0, 255, 0);
-                        rect.set_width(32);
-                        rect.set_height(32);
-                    }
-                    _ => {},
-                }
 
-                canvas.set_draw_color(color);
-                let _ = canvas.fill_rect(rect);
-            }
-        }*/
+        let _ = canvas.copy(&r[Sprites::Cursor], None, sdl2::rect::Rect::new(event_pump.mouse_state().x(), event_pump.mouse_state().y(), 16, 16));
+
         canvas.present();
         //std::thread::sleep(std::time::Duration::from_secs(2));
     }
