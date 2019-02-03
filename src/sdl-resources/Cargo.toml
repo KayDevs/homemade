@@ -1,0 +1,10 @@
+[package]
+name = "sdl-resources"
+version = "0.1.0"
+authors = ["Kay Hood <kay.moth.fuzz@gmail.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]

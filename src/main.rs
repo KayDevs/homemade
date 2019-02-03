@@ -1,9 +1,9 @@
 //use crate::combat::{Weapon};
 
 use world::{GameState, SystemRunner, Entity, Component};
-use world::storage::{HashMapStorage, BTreeMapStorage};
+use world::storage::{VecStorage, BTreeMapStorage};
 use homemade::common;
-use homemade::common::{Name, Position, RenderInfo};
+use homemade::common::{Name, Position, Velocity, Acceleration, Friction};
 use homemade::inventory;
 use homemade::stats;
 use std::error::Error;
@@ -59,18 +59,16 @@ fn chase_player(w: &GameState, p: Entity) {
     });
 }
 
-#[derive(Clone, Copy, Default, Debug)]
-struct Velocity {
-    x: f64,
-    y: f64,
-}
-impl Component for Velocity {
-    type Storage = HashMapStorage<Self>;
-}
-
-
 //include all the static resources from codegen
 include!(concat!(env!("OUT_DIR"), "/resources.rs"));
+
+//inject these into the engine renderer initialization code
+//invariant: make the engine run with or without these, since renderer is supposed to be independent
+#[derive(Clone)]
+struct RenderInfo(Sprites);
+impl Component for RenderInfo {
+    type Storage = VecStorage<Self>;
+}
 
 fn main() -> Result<(), Box<Error>> {
     let sdl_context = sdl2::init()?;
@@ -83,14 +81,16 @@ fn main() -> Result<(), Box<Error>> {
     let mut canvas = window.into_canvas().present_vsync().build()?;
     canvas.set_logical_size(640, 400)?;
     canvas.set_blend_mode(sdl2::render::BlendMode::Blend);
+    let texture_creator = canvas.texture_creator();
+    let mut lighting = texture_creator.create_texture_target(texture_creator.default_pixel_format(), 640, 400)?;
 
     sdl_context.mouse().show_cursor(false);
 
     let mut r = Resources::new(&canvas)?;
-
     let mut w = GameState::new();
 
-    w.register_component::<Velocity>();
+    w.register_component::<RenderInfo>();
+
     w.register_component::<Enemy>();
     w.register_component::<Player>();
     common::init(&mut w);
@@ -102,9 +102,11 @@ fn main() -> Result<(), Box<Error>> {
     let p = w.create_entity();
     w.insert(p, Player);
     w.insert(p, Position{x: 0.0, y: 0.0});
-    w.insert(p, Velocity{x: 2.0, y: -2.0});
+    w.insert(p, Acceleration{x: 2.0, y: 2.0});
+    w.insert(p, Velocity{x: 0.0, y: 0.0});
+    w.insert(p, Friction{x: 1.0, y: 1.0});
     w.insert(p, Name("kay"));
-    w.insert(p, RenderInfo("player"));
+    w.insert(p, RenderInfo(Sprites::Player));
     stats::set_base(&w, p, stats::VITALITY, 32);
     w.insert(p, inventory::Inventory::new());
 
@@ -132,13 +134,13 @@ fn main() -> Result<(), Box<Error>> {
         w.insert(e, Enemy);
         w.insert(e, Position{x: f64::from(i) * 32.0, y: 10.0});
         w.insert(e, Name("enemy"));
-        w.insert(e, RenderInfo("enemy"));
+        w.insert(e, RenderInfo(Sprites::Enemy));
     }
 
 
     //TODO: move this into 'tests' mod of 'inventory'
     let e = w.create_entity();
-    w.insert(e, RenderInfo("enemy"));
+    w.insert(e, RenderInfo(Sprites::Enemy));
     w.insert(e, Name("Inventory Test Entity"));
     w.insert(e, Position{x: 200.0, y: 300.0});
     w.insert(e, inventory::Consumable::new(vec![(stats::VITALITY, 3)]));
@@ -151,17 +153,9 @@ fn main() -> Result<(), Box<Error>> {
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 35: {}", stats::get_max(&w, p, stats::VITALITY));
     
-
     println!("こんにしわ! starting main loop");
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
-        //this makes the letterboxing black on screens with different resolutions
-        canvas.set_draw_color(sdl2::pixels::Color::RGB(0, 0, 0));
-        canvas.clear();
-        //this is the actual background color
-        canvas.set_draw_color(sdl2::pixels::Color::RGB(60, 44, 56));
-        let _ = canvas.fill_rect(None);
-
         //parse events
         use sdl2::event::Event;
         use sdl2::keyboard::Keycode;
@@ -174,57 +168,78 @@ fn main() -> Result<(), Box<Error>> {
                 _ => {}
             }
         }
+
+
         
         //using `update` syntax in function
         chase_player(&w, p);
         //using new `run` SystemRunner syntax
         w.run(|(_, pos, vel): (&mut Player, &mut Position, &mut Velocity)| {
-            if pos.x + 32.0 > 640 as f64 {
+            if pos.x + 32.0 > 640.0 || pos.x < 0.0 {
                 vel.x *= -1.0;
             }
-            if pos.x < 0 as f64 {
-                vel.x *= -1.0;
-            }
-            if pos.y + 32.0 > 400 as f64 {
+            if pos.y + 32.0 > 400.0 || pos.y < 0.0 {
                 vel.y *= -1.0;
             }
-            if pos.y < 0 as f64 {
-                vel.y *= -1.0;
-            }
-            pos.x += vel.x;
-            pos.y += vel.y;
         });
+
+        common::run_physics(&w);
         
         //rendering system :3
         //TODO: animation system, render according to seconds 
         // maybe store a start_time on every .reset() and then do current_frame = (seconds_passed - start_time) % num_frames;
         //TODO: rendering system, render according to physical units and not pixels
         use sdl2::rect::Rect;
+        use sdl2::pixels::Color;
+        use sdl2::render::BlendMode;
+        //this makes the letterboxing black on screens with different resolutions
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        canvas.clear();
+        //this is the actual background color
+        canvas.set_draw_color(Color::RGB(60, 44, 56));
+        let _ = canvas.fill_rect(None);
+
         w.update_all(|e, &mut Position{x, y}| {
             let mut rect = Rect::new(x as i32, y as i32, 16, 16);
-            w.update(e, |&mut RenderInfo(info)| {
+            w.update(e, |RenderInfo(info)| {
                 match info {
-                    "enemy" => {
+                    Sprites::Enemy => {
                         r[Sprites::Enemy].set_alpha_mod(127);
                         let _ = canvas.copy(&r[Sprites::Enemy], None, rect);
                         r[Sprites::Enemy].set_alpha_mod(255);
                     }
-                    "player" => {
+                    Sprites::Player => {
                         rect.set_width(32);
                         rect.set_height(32);
                         let _ = canvas.copy(&r[Sprites::Player], None, rect);
                     }
-                    _ => {}
+                    _ => {
+                        //generic function idea:
+                        //rect.set_width(&r[info].query().width);
+                        //rect.set_height(&r[info].query().height); 
+                        //let _ = canvas.copy(&r[info], None, rect);
+                    }
                 }
             });
         });
 
-        let _ = canvas.copy(&r[Sprites::Cursor], None, sdl2::rect::Rect::new(event_pump.mouse_state().x(), event_pump.mouse_state().y(), 16, 16));
+        let _ = canvas.with_texture_canvas(&mut lighting, |texture_canvas| {
+            texture_canvas.set_draw_color(Color::RGBA(128, 0, 128, 128));
+            texture_canvas.clear();
+            texture_canvas.set_draw_color(Color::RGBA(255, 225, 180, 255));
+            let _ = texture_canvas.fill_rect(Rect::new(20, 20, 200, 100));
+            texture_canvas.set_draw_color(Color::RGBA(255, 255, 255, 255));
+            let _ = texture_canvas.fill_rect(Rect::new(320, 0, 320, 400));
+        });
+        lighting.set_blend_mode(BlendMode::Mod);
+        let _ = canvas.copy(&lighting, None, None);
+
+        let _ = canvas.copy(&r[Sprites::Cursor], None, Rect::new(event_pump.mouse_state().x(), event_pump.mouse_state().y(), 16, 16));
 
         canvas.present();
         //std::thread::sleep(std::time::Duration::from_secs(2));
     }
 
-    println!("Goodbye!!");
+    println!("バイ-バイ! shutting down"); //sublime doesn't render ths as monospace for some reason
     Ok(())
 }

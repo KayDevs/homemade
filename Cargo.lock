@@ -92,6 +92,7 @@ name = "homemade"
 version = "0.1.0"
 dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sdl-resources 0.1.0",
  "sdl2 0.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.84 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.84 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -196,6 +197,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "ryu"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "sdl-resources"
+version = "0.1.0"
 
 [[package]]
 name = "sdl2"
