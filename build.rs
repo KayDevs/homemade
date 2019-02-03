@@ -85,7 +85,7 @@ fn main() {
     //create source file
     resources_out.write_all(b"
 mod resources {
-    #[derive(Debug, PartialEq, Eq, Hash)]
+    #[derive(Debug, PartialEq, Eq, Hash, Clone)]
     pub enum Sprites {
     ").unwrap();
         for e in &bmps {
