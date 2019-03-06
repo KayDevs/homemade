@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<Error>> {
     let video = sdl_context.video()?;
     let window = video.window("rust-sdl2 demo", 640, 400)
     .position_centered()
-    .fullscreen_desktop()
+    //.fullscreen_desktop()
     .build()?;
 
     let mut canvas = window.into_canvas().present_vsync().build()?;
@@ -146,16 +146,16 @@ fn main() -> Result<(), Box<Error>> {
     w.insert(e, Position{x: 200.0, y: 300.0});
     w.insert(e, inventory::Consumable::new(vec![(stats::VITALITY, 3)]));
     w.insert(e, inventory::ActiveEffect::new(vec![(stats::VITALITY, -3)]));
+    println!("type hash: {:#0128b}", w.type_of(e));
     inventory::add_item(&w, p, e);
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 29: {}", stats::get_max(&w, p, stats::VITALITY));
-    //inventory::remove_item(&w, p, e);
     inventory::consume(&w, p, e);
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 35: {}", stats::get_max(&w, p, stats::VITALITY));
 
 
-    let myp = MainPlayer::new(&mut w);
+    MainPlayer::new(&mut w);
     
     println!("こんにしわ! starting main loop");
     let mut event_pump = sdl_context.event_pump()?;
@@ -174,7 +174,6 @@ fn main() -> Result<(), Box<Error>> {
         }
 
         MainPlayer::update(&w);
-        println!("({}, {})", w.get_value::<Position>(myp).x, w.get_value::<Position>(myp).y);
         
         //using `update` syntax in function
         chase_player(&w, p);

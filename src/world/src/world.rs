@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
+use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
 
 use std::any::{TypeId, Any}; //for a little bit of dynamic typing
@@ -39,7 +40,7 @@ impl Component for Deleted {
 
 //za warudo
 pub struct GameState {
-    entities: RwLock<Vec<Entity>>,
+    entities: RefCell<Vec<Entity>>, //uses RefCell and not RwLock because shouldn't be accessed outside here
     hashes: HashMap<TypeId, i128>,
     hash_base: i128,
     world: HashMap<TypeId, Box<Any>>,
@@ -48,7 +49,7 @@ pub struct GameState {
 
 impl GameState {
     pub fn new() -> GameState {
-        let mut w = GameState{entities: RwLock::new(Vec::new()), hashes: HashMap::new(), hash_base: 0, world: HashMap::new(), resources: HashMap::new()};
+        let mut w = GameState{entities: RefCell::new(Vec::new()), hashes: HashMap::new(), hash_base: 1, world: HashMap::new(), resources: HashMap::new()};
         w.register_component::<Deleted>();
         w
     }
@@ -64,13 +65,14 @@ impl GameState {
         //wrap up Storage in a RWLock for concurrency :3
         self.world.entry(TypeId::of::<C>()).or_insert(Box::new(RwLock::new(C::Storage::new())));
         if self.hashes.get(&TypeId::of::<C>()).is_none() {
+            //println!("base: {:#0128b}", self.hash_base);
             self.hashes.insert(TypeId::of::<C>(), self.hash_base);
             self.hash_base <<= 1;
         }
     }
     pub fn create_entity(&mut self) -> Entity {
-        let e = Entity{index: self.entities.read().unwrap().len(), generation: 0, hash: 0};
-        self.entities.write().unwrap().push(e);
+        let e = Entity{index: self.entities.borrow().len(), generation: 0, hash: 0};
+        self.entities.borrow_mut().push(e);
         e
     }
     pub fn delete_entity(&self, entity: Entity) {
@@ -84,7 +86,7 @@ impl GameState {
     }
     //doing this in 'world' bc local copies of Entity might not be correct wrt hashing
     pub fn type_of(&self, entity: Entity) -> i128 {
-        self.entities.read().unwrap()[entity.index].hash
+        self.entities.borrow()[entity.index].hash
     }
 
     #[allow(unused)]
@@ -94,7 +96,7 @@ impl GameState {
             deleted_entities.push(e);
         });
         for e in deleted_entities {
-            self.entities.write().unwrap()[e.index].generation += 1;
+            self.entities.borrow_mut()[e.index].generation += 1;
             //TODO: enforce that entities of mismatched generations may not be accessed
         }
         //TODO: reuse free entity slots
@@ -109,7 +111,7 @@ impl GameState {
 
     pub fn insert<C: Component>(&self, entity: Entity, c: C) {
         self.get_storage::<C>().write().unwrap().insert(entity, c);
-        self.entities.write().unwrap()[entity.index].hash += self.hashes[&TypeId::of::<C>()];
+        self.entities.borrow_mut()[entity.index].hash ^= self.hashes[&TypeId::of::<C>()];
     }
     pub fn delete<C: Component>(&self, entity: Entity) {
         self.lock_write::<C>().delete(entity);
@@ -138,7 +140,7 @@ impl GameState {
     //takes a closure, updates select components
     pub fn update_all<C: Component>(&self, mut f: impl FnMut(Entity, &mut C)) {
         let mut lock = self.lock_write::<C>();
-        let entities = self.entities.read().unwrap();
+        let entities = self.entities.borrow();
         for &e in entities.iter().filter(move |&e| self.is_alive(*e)) {
             if let Some(c) = lock.get_mut(e) {
                 f(e, c);
@@ -155,7 +157,7 @@ impl GameState {
 
     pub fn read_all<C: Component>(&self, mut f: impl FnMut(Entity, &C)) {
         let lock = self.lock_read::<C>();
-        let entities = self.entities.read().unwrap();
+        let entities = self.entities.borrow();
         for &e in entities.iter().filter(move |&e| self.is_alive(*e)) {
             if let Some(c) = lock.get(e) {
                 f(e, c);
@@ -193,7 +195,7 @@ macro_rules! impl_system {
         impl<$($tp),*, Func> SystemRunner<($($tp),*,), Func> for GameState where $($tp: Component),*, Func: FnMut(($(&mut $tp),*,)) {
             #[allow(non_snake_case)] //required until rust has ident_lowercase! or smth
             fn run(&self, mut f: Func) {
-                let entities = self.entities.read().unwrap();
+                let entities = self.entities.borrow();
                 for &i in entities.iter().filter(move |&e| self.is_alive(*e)) {
                     if let ($(Some($tp)),*,) = ($(self.lock_write::<$tp>().get_mut(i)),*,) {
                         f(($($tp),*,));
