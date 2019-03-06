@@ -3,11 +3,12 @@
 use world::{GameState, SystemRunner, Entity, Component};
 use world::storage::{VecStorage, BTreeMapStorage};
 use homemade::common;
-use homemade::common::{Name, Position, Velocity, Acceleration, Friction};
+use homemade::common::{Name, Position, Velocity, Friction};
 use homemade::inventory;
 use homemade::stats;
 use std::error::Error;
 use resources::{Resources, Sprites};
+use scripts::MainPlayer;
 
 #[derive(Clone)]
 struct Player;
@@ -61,6 +62,7 @@ fn chase_player(w: &GameState, p: Entity) {
 
 //include all the static resources from codegen
 include!(concat!(env!("OUT_DIR"), "/resources.rs"));
+include!(concat!(env!("OUT_DIR"), "/scripts.rs"));
 
 //inject these into the engine renderer initialization code
 //invariant: make the engine run with or without these, since renderer is supposed to be independent
@@ -102,8 +104,7 @@ fn main() -> Result<(), Box<Error>> {
     let p = w.create_entity();
     w.insert(p, Player);
     w.insert(p, Position{x: 0.0, y: 0.0});
-    w.insert(p, Acceleration{x: 2.0, y: 2.0});
-    w.insert(p, Velocity{x: 0.0, y: 0.0});
+    w.insert(p, Velocity{x: 2.0, y: 2.0});
     w.insert(p, Friction{x: 1.0, y: 1.0});
     w.insert(p, Name("kay"));
     w.insert(p, RenderInfo(Sprites::Player));
@@ -152,6 +153,9 @@ fn main() -> Result<(), Box<Error>> {
     inventory::consume(&w, p, e);
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 35: {}", stats::get_max(&w, p, stats::VITALITY));
+
+
+    let myp = MainPlayer::new(&mut w);
     
     println!("こんにしわ! starting main loop");
     let mut event_pump = sdl_context.event_pump()?;
@@ -169,7 +173,8 @@ fn main() -> Result<(), Box<Error>> {
             }
         }
 
-
+        MainPlayer::update(&w);
+        println!("({}, {})", w.get_value::<Position>(myp).x, w.get_value::<Position>(myp).y);
         
         //using `update` syntax in function
         chase_player(&w, p);

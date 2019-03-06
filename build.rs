@@ -59,11 +59,37 @@ fn main() {
         println!("cargo:rustc-link-lib=sndio"); 
     }
 
-    //'resources' folder codegen
+    //'resources' and 'scripts' folder codegen
     //
     let out_dir = env::var("OUT_DIR").unwrap();
-    let path = Path::new(&out_dir).join("resources.rs");
-    let mut resources_out = File::create(&path).expect("cannot read resources.rs");
+
+    let scripts_path = Path::new(&out_dir).join("scripts.rs");
+    let mut scripts_out = File::create(&scripts_path).expect("cannot read scripts.rs");
+    let scripts_dir = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("scripts/");
+    scripts_out.write_all(&std::fs::read_to_string(Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("src/build/script_prefab.rs")).expect("cannot read script_prefab.rs").into_bytes()).unwrap();
+    scripts_out.write_all(b"mod scripts {
+        use crate::common::*;
+        use ::world::*;
+        use ::world::storage::VecStorage;
+        use crate::*;").unwrap();
+    for script in std::fs::read_dir(scripts_dir.clone()).expect("cannot read scripts dir") {
+        let script = script.unwrap();
+        let file_name = script.file_name();
+        let fname = file_name.to_str().unwrap();
+        if fname.ends_with(".rsc") {
+            scripts_out.write_all(b"
+                script_prefab!(").unwrap();
+            scripts_out.write_all(script.path().file_stem().unwrap().to_str().unwrap().as_bytes()).unwrap();
+            scripts_out.write_all(b"{").unwrap();
+            scripts_out.write_all(&std::fs::read_to_string(scripts_dir.join(file_name)).unwrap().into_bytes()).unwrap();
+            scripts_out.write_all(b"}").unwrap();
+            scripts_out.write_all(b");").unwrap();
+        }
+    }
+    scripts_out.write_all(b"}").unwrap();
+
+    let resource_path = Path::new(&out_dir).join("resources.rs");
+    let mut resources_out = File::create(&resource_path).expect("cannot read resources.rs");
     let resources_dir = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("resources/");
     struct Entry {
         filename: String,
