@@ -147,12 +147,23 @@ pub fn add_item(w: &GameState, entity: Entity, item: Entity) {
         if w.has_flag::<Position>(item) {
             w.delete::<Position>(item);
         }
-        inv.items.push(item);
-
-        //TODO: add 'stackable' logic here 
-        //make sure that duplicate items that are stackable are stacked upon adding
-        //(how do we check that if every item is just an ID??)
-        //entities don't keep track of their own components...
+        if w.has_flag::<Stackable>(item) {
+            let mut has_stack = false;
+            for &e in &inv.items {
+                if w.type_of(e) == w.type_of(item) {
+                    has_stack = true;
+                    w.update(e, |stack: &mut Stackable| {
+                        stack.quantity += 1;
+                    });
+                    break;
+                }
+            }
+            if !has_stack {
+                inv.items.push(item);
+            }
+        } else {
+            inv.items.push(item);
+        }
 
         w.update(item, |a: &mut ActiveEffect| {
             if let Some(Name(name)) = w.clone(item) {
@@ -171,7 +182,13 @@ pub fn remove_item(w: &GameState, entity: Entity, item: Entity) {
     w.update(entity, |inv: &mut Inventory| {
         for i in 0..inv.items.len() {
             if inv.items[i] == item {
-                inv.items.remove(i);
+                if w.has_flag::<Stackable>(item) {
+                    w.update(inv.items[i], |stack: &mut Stackable| {
+                        stack.quantity -= 1;
+                    });
+                } else {
+                    inv.items.remove(i);
+                }
                 w.update(item, |_: &mut ActiveEffect| {
                     if let Some(Name(name)) = w.clone(item) {
                         stats::unbuff(w, entity, name);
@@ -197,20 +214,7 @@ pub fn consume(w: &GameState, entity: Entity, item: Entity) {
             panic!("Consumable items must have Name");
         }
 
-        //TODO: have just this line, move 'stackable' logic into 'remove_item' function itself
-        //remove_item(w, entity, item);
-
-        if w.has_flag::<Stackable>(item) {
-            w.update(item, |s: &mut Stackable|{
-                s.quantity -= 1;
-                if s.quantity <= 0 {
-                    remove_item(w, entity, item);
-                    w.delete_entity(item);
-                }
-            });
-        } else {
-            remove_item(w, entity, item);
-            w.delete_entity(item);
-        }
+        remove_item(w, entity, item); //this just takes it out of the inventory
+        w.delete_entity(item); //this actually deletes it from the world, supposedly
     });
 }

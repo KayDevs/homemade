@@ -8,6 +8,7 @@ use std::any::{TypeId, Any}; //for a little bit of dynamic typing
 pub struct Entity {
     index: usize,
     generation: usize,
+    hash: i128,
 }
 impl Entity {
     pub fn id(&self) -> usize {
@@ -38,14 +39,16 @@ impl Component for Deleted {
 
 //za warudo
 pub struct GameState {
-    entities: Vec<Entity>,
+    entities: RwLock<Vec<Entity>>,
+    hashes: HashMap<TypeId, i128>,
+    hash_base: i128,
     world: HashMap<TypeId, Box<Any>>,
     resources: HashMap<TypeId, Box<Any>>,
 }
 
 impl GameState {
     pub fn new() -> GameState {
-        let mut w = GameState{entities: Vec::new(), world: HashMap::new(), resources: HashMap::new()};
+        let mut w = GameState{entities: RwLock::new(Vec::new()), hashes: HashMap::new(), hash_base: 0, world: HashMap::new(), resources: HashMap::new()};
         w.register_component::<Deleted>();
         w
     }
@@ -59,11 +62,15 @@ impl GameState {
 
     pub fn register_component<C: Component>(&mut self) {
         //wrap up Storage in a RWLock for concurrency :3
-        self.world.insert(TypeId::of::<C>(), Box::new(RwLock::new(C::Storage::new())));
+        self.world.entry(TypeId::of::<C>()).or_insert(Box::new(RwLock::new(C::Storage::new())));
+        if self.hashes.get(&TypeId::of::<C>()).is_none() {
+            self.hashes.insert(TypeId::of::<C>(), self.hash_base);
+            self.hash_base <<= 1;
+        }
     }
     pub fn create_entity(&mut self) -> Entity {
-        let e = Entity{index: self.entities.len(), generation: 0};
-        self.entities.push(e);
+        let e = Entity{index: self.entities.read().unwrap().len(), generation: 0, hash: 0};
+        self.entities.write().unwrap().push(e);
         e
     }
     pub fn delete_entity(&self, entity: Entity) {
@@ -75,6 +82,10 @@ impl GameState {
     pub fn is_deleted(&self, entity: Entity) -> bool {
         self.lock_read::<Deleted>().get(entity).is_some()
     }
+    //doing this in 'world' bc local copies of Entity might not be correct wrt hashing
+    pub fn type_of(&self, entity: Entity) -> i128 {
+        self.entities.read().unwrap()[entity.index].hash
+    }
 
     #[allow(unused)]
     fn sweep_delete(&mut self) {
@@ -83,7 +94,7 @@ impl GameState {
             deleted_entities.push(e);
         });
         for e in deleted_entities {
-            self.entities[e.id()].generation += 1;
+            self.entities.write().unwrap()[e.index].generation += 1;
             //TODO: enforce that entities of mismatched generations may not be accessed
         }
         //TODO: reuse free entity slots
@@ -98,6 +109,7 @@ impl GameState {
 
     pub fn insert<C: Component>(&self, entity: Entity, c: C) {
         self.get_storage::<C>().write().unwrap().insert(entity, c);
+        self.entities.write().unwrap()[entity.index].hash += self.hashes[&TypeId::of::<C>()];
     }
     pub fn delete<C: Component>(&self, entity: Entity) {
         self.lock_write::<C>().delete(entity);
@@ -126,7 +138,8 @@ impl GameState {
     //takes a closure, updates select components
     pub fn update_all<C: Component>(&self, mut f: impl FnMut(Entity, &mut C)) {
         let mut lock = self.lock_write::<C>();
-        for &e in self.iter() {
+        let entities = self.entities.read().unwrap();
+        for &e in entities.iter().filter(move |&e| self.is_alive(*e)) {
             if let Some(c) = lock.get_mut(e) {
                 f(e, c);
             }
@@ -140,15 +153,16 @@ impl GameState {
         }
     }
 
-    pub fn read_all<C: Component>(&self, f: impl Fn(Entity, &C)) {
+    pub fn read_all<C: Component>(&self, mut f: impl FnMut(Entity, &C)) {
         let lock = self.lock_read::<C>();
-        for &e in self.iter() {
+        let entities = self.entities.read().unwrap();
+        for &e in entities.iter().filter(move |&e| self.is_alive(*e)) {
             if let Some(c) = lock.get(e) {
                 f(e, c);
             }
         }
     }
-    pub fn read<C: Component>(&self, entity: Entity, f: impl Fn(&C)) {
+    pub fn read<C: Component>(&self, entity: Entity, mut f: impl FnMut(&C)) {
         if self.is_alive(entity) {
             if let Some(c) = self.lock_write::<C>().get(entity) {
                 f(c);
@@ -164,11 +178,6 @@ impl GameState {
             false
         }
     }
-    
-    //easily iterate only over live entities
-    fn iter(&self) -> impl Iterator<Item=&Entity> {
-        self.entities.iter().filter(move |&e| self.is_alive(*e))
-    }
 }
 
 
@@ -181,10 +190,11 @@ pub trait SystemRunner<T, F> {
 
 macro_rules! impl_system {
     ($($tp:ident),*) => (
-        impl<$($tp),*, F> SystemRunner<($($tp),*,), F> for GameState where $($tp: Component),*, F: FnMut(($(&mut $tp),*,)) {
+        impl<$($tp),*, Func> SystemRunner<($($tp),*,), Func> for GameState where $($tp: Component),*, Func: FnMut(($(&mut $tp),*,)) {
             #[allow(non_snake_case)] //required until rust has ident_lowercase! or smth
-            fn run(&self, mut f: F) {
-                for &i in self.iter() {
+            fn run(&self, mut f: Func) {
+                let entities = self.entities.read().unwrap();
+                for &i in entities.iter().filter(move |&e| self.is_alive(*e)) {
                     if let ($(Some($tp)),*,) = ($(self.lock_write::<$tp>().get_mut(i)),*,) {
                         f(($($tp),*,));
                     }
@@ -199,7 +209,11 @@ impl_system!(A, B);
 impl_system!(A, B, C);
 impl_system!(A, B, C, D);
 impl_system!(A, B, C, D, E);
-//5 components is plenty for now
+impl_system!(A, B, C, D, E, F);
+impl_system!(A, B, C, D, E, F, G);
+impl_system!(A, B, C, D, E, F, G, H);
+
+//8 components is plenty for now
 
 /*impl<T, F> SystemRunner<(T), F> for GameState where T: Component, F: FnMut((&mut T)) {
     fn run(&self, mut f: F) {
