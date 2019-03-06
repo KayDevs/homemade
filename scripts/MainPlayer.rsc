@@ -13,9 +13,9 @@ inventory: inventory::Inventory = inventory::Inventory::new();
 fn new(vars) {}
 
 fn update(vars) {
-    pos.x = vars.center.x + vars.angle.cos() * vars.radius;
-    pos.y = vars.center.y + vars.angle.sin() * vars.radius;
-    vars.angle += 0.1;
+    pos.x = vars.center.x + vars.angle.to_radians().cos() * vars.radius;
+    pos.y = vars.center.y + vars.angle.to_radians().sin() * vars.radius;
+    vars.angle += 5.0;
     if vars.angle > 360.0 {
     	vars.angle = 0.0;
     }
