@@ -207,14 +207,13 @@ pub fn remove_item(w: &GameState, entity: Entity, item: Entity) {
 pub fn consume(w: &GameState, entity: Entity, item: Entity) {
     w.update(item, |c: &mut Consumable| {
         if let Some(Name(name)) = w.clone(item) {
+            remove_item(w, entity, item); //take out of inventory first (removes ActiveEffect)
             for buff in &c.buffs {
                 stats::buff(w, entity, buff.0, name, buff.1);
             }
         } else {
             panic!("Consumable items must have Name");
         }
-
-        remove_item(w, entity, item); //this just takes it out of the inventory
         w.delete_entity(item); //this actually deletes it from the world, supposedly
     });
 }
