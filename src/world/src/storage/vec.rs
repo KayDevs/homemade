@@ -1,4 +1,4 @@
-use crate::world::{Entity, Component, ComponentStorage};
+use crate::world::{Component, ComponentStorage};
 
 pub type VecStorage<C> = Vec<Option<C>>;
 
@@ -6,32 +6,32 @@ impl<C> ComponentStorage<C> for Vec<Option<C>> where C: Component + 'static + Si
     fn new() -> Vec<Option<C>> {
         Vec::new()
     }
-    fn insert(&mut self, entity: Entity, c: C) {
-        if entity.id() >= self.len() {
-            self.reserve(entity.id() - self.len() + 1);
-            for _ in 0..=entity.id() - self.len() {
+    fn insert(&mut self, entity: usize, c: C) {
+        if entity >= self.len() {
+            self.reserve(entity - self.len() + 1);
+            for _ in 0..=entity - self.len() {
                 self.push(None);
             }
         }
-        self[entity.id()] = Some(c);
+        self[entity] = Some(c);
     }
-    fn delete(&mut self, entity: Entity) {
-        if entity.id() < self.len() {
-            self[entity.id()] = None;
+    fn delete(&mut self, entity: usize) {
+        if entity < self.len() {
+            self[entity] = None;
         }
     }
-    fn get(&self, entity: Entity) -> Option<&C> {
-        if entity.id() >= self.len() {
+    fn get(&self, entity: usize) -> Option<&C> {
+        if entity >= self.len() {
             None
         } else {
-            self[entity.id()].as_ref()
+            self[entity].as_ref()
         }
     }
-    fn get_mut(&mut self, entity: Entity) -> Option<&mut C> {
-        if entity.id() >= self.len() {
+    fn get_mut(&mut self, entity: usize) -> Option<&mut C> {
+        if entity >= self.len() {
             None
         } else {
-            self[entity.id()].as_mut()
+            self[entity].as_mut()
         }
     }
 }
