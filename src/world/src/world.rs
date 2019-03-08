@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
-
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::any::{TypeId, Any}; //for a little bit of dynamic typing
 
 #[derive(Clone, Copy, PartialOrd, Ord, PartialEq, Eq, Hash, Debug)]
@@ -19,10 +19,10 @@ impl Entity {
 
 pub trait ComponentStorage<C: Component> {
     fn new() -> Self where Self: Sized;
-    fn insert(&mut self, entity: Entity, c: C);
-    fn delete(&mut self, entity: Entity);
-    fn get(&self, entity: Entity) -> Option<&C>;
-    fn get_mut(&mut self, entity: Entity) -> Option<&mut C>;
+    fn insert(&mut self, entity: usize, c: C);
+    fn delete(&mut self, entity: usize);
+    fn get(&self, entity: usize) -> Option<&C>;
+    fn get_mut(&mut self, entity: usize) -> Option<&mut C>;
 }
 
 pub trait Component: 'static + Sized + Clone {
@@ -40,7 +40,10 @@ impl Component for Deleted {
 
 //za warudo
 pub struct GameState {
-    entities: RefCell<Vec<Entity>>, //uses RefCell and not RwLock because shouldn't be accessed outside here
+    entities: Vec<Entity>, //uses RefCell and not RwLock because shouldn't be accessed outside here
+    new_entities: RefCell<Vec<Entity>>,
+    updated_entities: RefCell<Vec<Entity>>,
+    entities_size: AtomicUsize, //this is so we can iterate without having to access entities/new_entities directly
     hashes: HashMap<TypeId, i128>,
     hash_base: i128,
     world: HashMap<TypeId, Box<Any>>,
@@ -49,7 +52,16 @@ pub struct GameState {
 
 impl GameState {
     pub fn new() -> GameState {
-        let mut w = GameState{entities: RefCell::new(Vec::new()), hashes: HashMap::new(), hash_base: 1, world: HashMap::new(), resources: HashMap::new()};
+        let mut w = GameState{
+            entities: Vec::new(), 
+            new_entities: RefCell::new(Vec::new()), 
+            updated_entities: RefCell::new(Vec::new()), 
+            entities_size: AtomicUsize::new(0),
+            hashes: HashMap::new(), 
+            hash_base: 1, 
+            world: HashMap::new(), 
+            resources: HashMap::new()
+        };
         w.register_component::<Deleted>();
         w
     }
@@ -65,28 +77,47 @@ impl GameState {
         //wrap up Storage in a RWLock for concurrency :3
         self.world.entry(TypeId::of::<C>()).or_insert(Box::new(RwLock::new(C::Storage::new())));
         if self.hashes.get(&TypeId::of::<C>()).is_none() {
-            //println!("base: {:#0128b}", self.hash_base);
             self.hashes.insert(TypeId::of::<C>(), self.hash_base);
             self.hash_base <<= 1;
         }
     }
-    pub fn create_entity(&mut self) -> Entity {
-        let e = Entity{index: self.entities.borrow().len(), generation: 0, hash: 0};
-        self.entities.borrow_mut().push(e);
+    pub fn create_entity(&self) -> Entity {
+        let e = Entity{index: self.entities_size.load(Ordering::SeqCst), generation: 0, hash: 0};
+        self.new_entities.borrow_mut().push(e);
+        self.entities_size.fetch_add(1, Ordering::SeqCst);
         e
+    }
+    fn intern(&self, entity: Entity) -> Entity {
+        if entity.index > self.entities.len() {
+            //it hasn't been updated yet; still in new_entities
+            self.new_entities.borrow()[entity.index - self.entities.len()]
+        } else {
+            self.entities[entity.index]
+        }
+    }
+    pub fn update_entities(&mut self) {
+        /*println!("cur: {:?}", self.entities);
+        println!("new: {:?}", self.new_entities);
+        println!("upd: {:?}", self.updated_entities);*/
+        for e in self.new_entities.borrow_mut().drain(..) {
+            self.entities.push(e);
+        }
+        for e in self.updated_entities.borrow_mut().drain(..) {
+            self.entities[e.index] = e;
+        }
     }
     pub fn delete_entity(&self, entity: Entity) {
         self.insert(entity, Deleted);
     }
     pub fn is_alive(&self, entity: Entity) -> bool {
-        self.lock_read::<Deleted>().get(entity).is_none()
+        self.lock_read::<Deleted>().get(entity.index).is_none()
     }
     pub fn is_deleted(&self, entity: Entity) -> bool {
-        self.lock_read::<Deleted>().get(entity).is_some()
+        self.lock_read::<Deleted>().get(entity.index).is_some()
     }
     //doing this in 'world' bc local copies of Entity might not be correct wrt hashing
     pub fn type_of(&self, entity: Entity) -> i128 {
-        self.entities.borrow()[entity.index].hash
+        self.intern(entity).hash
     }
 
     #[allow(unused)]
@@ -96,7 +127,7 @@ impl GameState {
             deleted_entities.push(e);
         });
         for e in deleted_entities {
-            self.entities.borrow_mut()[e.index].generation += 1;
+            self.entities[e.index].generation += 1;
             //TODO: enforce that entities of mismatched generations may not be accessed
         }
         //TODO: reuse free entity slots
@@ -109,12 +140,22 @@ impl GameState {
         self.world[&TypeId::of::<C>()].downcast_ref::<RwLock<C::Storage>>().unwrap()
     }
 
-    pub fn insert<C: Component>(&self, entity: Entity, c: C) {
-        self.get_storage::<C>().write().unwrap().insert(entity, c);
-        self.entities.borrow_mut()[entity.index].hash ^= self.hashes[&TypeId::of::<C>()];
+    //these here should compare generations (with the entity in entities[])
+    pub fn insert<C: Component>(&self, mut entity: Entity, c: C) {
+        self.get_storage::<C>().write().unwrap().insert(entity.index, c);
+
+        if let Some(ref mut e) = self.updated_entities.borrow_mut().get_mut(entity.index) {
+            e.hash ^= self.hashes[&TypeId::of::<C>()];   
+            return;
+        }
+        //if I try to do this in the 'else' it complains that updated_entities is already borrowed
+        //which, I mean, I guess
+        entity.hash ^= self.hashes[&TypeId::of::<C>()];
+        self.updated_entities.borrow_mut().push(entity);
     }
     pub fn delete<C: Component>(&self, entity: Entity) {
-        self.lock_write::<C>().delete(entity);
+        self.lock_write::<C>().delete(entity.index);
+        //todo: hashing
     }
     fn lock_read<C: Component>(&self) -> impl Deref<Target=impl ComponentStorage<C>> + '_ {
         self.get_storage::<C>().read().unwrap()
@@ -127,29 +168,31 @@ impl GameState {
     //(also doesn't lock read for the length of the returned value)
     pub fn clone<C: Component>(&self, entity: Entity) -> Option<C> {
         if self.is_alive(entity) {
-            self.lock_read::<C>().get(entity).cloned()
+            self.lock_read::<C>().get(entity.index).cloned()
         } else {
             None
         }
     }
     //unsafe function
     pub fn get_value<C: Component>(&self, entity: Entity) -> C {
-        self.lock_read::<C>().get(entity).unwrap().clone()
+        self.lock_read::<C>().get(entity.index).unwrap().clone()
     }
 
     //takes a closure, updates select components
     pub fn update_all<C: Component>(&self, mut f: impl FnMut(Entity, &mut C)) {
         let mut lock = self.lock_write::<C>();
-        let entities = self.entities.borrow();
-        for &e in entities.iter().filter(move |&e| self.is_alive(*e)) {
-            if let Some(c) = lock.get_mut(e) {
-                f(e, c);
+        for i in 0..self.entities_size.load(Ordering::SeqCst) {
+            let e = Entity{index: i, generation: 0, hash: 0};
+            if self.is_alive(e) {
+                if let Some(c) = lock.get_mut(e.index) {
+                    f(e, c);
+                }
             }
         }
     }
     pub fn update<C: Component>(&self, entity: Entity, mut f: impl FnMut(&mut C)) {
         if self.is_alive(entity) {
-            if let Some(c) = self.lock_write::<C>().get_mut(entity) {
+            if let Some(c) = self.lock_write::<C>().get_mut(entity.index) {
                 f(c);
             }
         }
@@ -157,16 +200,18 @@ impl GameState {
 
     pub fn read_all<C: Component>(&self, mut f: impl FnMut(Entity, &C)) {
         let lock = self.lock_read::<C>();
-        let entities = self.entities.borrow();
-        for &e in entities.iter().filter(move |&e| self.is_alive(*e)) {
-            if let Some(c) = lock.get(e) {
-                f(e, c);
+        for i in 0..self.entities_size.load(Ordering::SeqCst) {
+            let e = Entity{index: i, generation: 0, hash: 0};
+            if self.is_alive(e) {
+                if let Some(c) = lock.get(e.index) {
+                    f(e, c);
+                }
             }
         }
     }
     pub fn read<C: Component>(&self, entity: Entity, mut f: impl FnMut(&C)) {
         if self.is_alive(entity) {
-            if let Some(c) = self.lock_write::<C>().get(entity) {
+            if let Some(c) = self.lock_write::<C>().get(entity.index) {
                 f(c);
             }
         }
@@ -175,7 +220,7 @@ impl GameState {
     //just a simple check for flag-type components
     pub fn has_flag<C: Component>(&self, entity: Entity) -> bool {
         if self.is_alive(entity) {
-            self.lock_read::<C>().get(entity).is_some()
+            self.lock_read::<C>().get(entity.index).is_some()
         } else {
             false
         }
@@ -195,10 +240,16 @@ macro_rules! impl_system {
         impl<$($tp),*, Func> SystemRunner<($($tp),*,), Func> for GameState where $($tp: Component),*, Func: FnMut(($(&mut $tp),*,)) {
             #[allow(non_snake_case)] //required until rust has ident_lowercase! or smth
             fn run(&self, mut f: Func) {
-                let entities = self.entities.borrow();
-                for &i in entities.iter().filter(move |&e| self.is_alive(*e)) {
-                    if let ($(Some($tp)),*,) = ($(self.lock_write::<$tp>().get_mut(i)),*,) {
-                        f(($($tp),*,));
+                for i in 0..self.entities_size.load(Ordering::SeqCst) {
+                    let e = Entity{index: i, generation: 0, hash: 0};
+                    if self.is_alive(e) {
+                        if let ($(Some(mut $tp)),*,) = ($(self.clone::<$tp>(e)),*,) {
+                            //calls function on cloned values to make sure no concurrent access In the function
+                            f(($(&mut $tp),*,));
+                            $(self.update(e, move |c: &mut $tp| {
+                                *c = $tp.clone();
+                            });)*
+                        }
                     }
                 }
             }

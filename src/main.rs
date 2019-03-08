@@ -8,7 +8,7 @@ use homemade::inventory;
 use homemade::stats;
 use std::error::Error;
 use resources::{Resources, Sprites};
-use scripts::MainPlayer;
+use scripts::*;
 
 #[derive(Clone)]
 struct Player;
@@ -29,35 +29,30 @@ impl Component for Player {
     }
 }*/
 
+fn follow(distance: f64, leader: &Position, follower: &mut Position) {
+    let diffx = follower.x - leader.x;
+    let diffy = follower.y - leader.y;
+    if diffx.abs() > distance {
+        if diffx > 0.0 {
+            follower.x -= 1.0;
+        } else {
+            follower.x += 1.0;
+        }
+    }
+    if diffy.abs() > distance {
+        if diffy > 0.0 {
+            follower.y -= 1.0;
+        } else {
+            follower.y += 1.0;
+        }
+    }
+
+}
+
 #[derive(Clone)]
 struct Enemy;
 impl Component for Enemy {
     type Storage = BTreeMapStorage<Self>;
-}
-
-fn chase_player(w: &GameState, p: Entity) {
-    let player_pos = w.get_value::<Position>(p);
-
-    w.update_all(|i, enemy_pos: &mut Position| {
-        if w.has_flag::<Enemy>(i) {
-            let diffx = enemy_pos.x - player_pos.x;
-            let diffy = enemy_pos.y - player_pos.y;
-            if diffx.abs() > 0.0 {
-                if diffx > 0.0 {
-                    enemy_pos.x -= 1.0;
-                } else {
-                    enemy_pos.x += 1.0;
-                }
-            }
-            if diffy.abs() > 0.0 {
-                if diffy > 0.0 {
-                    enemy_pos.y -= 1.0;
-                } else {
-                    enemy_pos.y += 1.0;
-                }
-            }
-        }
-    });
 }
 
 //include all the static resources from codegen
@@ -98,6 +93,9 @@ fn main() -> Result<(), Box<Error>> {
     common::init(&mut w);
     stats::init(&mut w);
     inventory::init(&mut w);
+    SpinPlayer::init(&mut w);
+    EnemyTrail::init(&mut w);
+    Follower::init(&mut w);
     //w.register_component::<Weapon>();
     //w.register_component::<Equippable<Weapon>>(); //containee
     //w.register_component::<Equipment<Weapon>>(); //container
@@ -130,15 +128,6 @@ fn main() -> Result<(), Box<Error>> {
     println!("{:?}", w.get_value::<Equipment<Weapon>>(p).equipment());
     */
 
-    for i in 0..10 {
-        let e = w.create_entity();
-        w.insert(e, Enemy);
-        w.insert(e, Position{x: f64::from(i) * 32.0, y: 10.0});
-        w.insert(e, Name("enemy"));
-        w.insert(e, RenderInfo(Sprites::Enemy));
-    }
-
-
     //TODO: move this into 'tests' mod of 'inventory'
     let e = w.create_entity();
     w.insert(e, RenderInfo(Sprites::Enemy));
@@ -146,6 +135,7 @@ fn main() -> Result<(), Box<Error>> {
     w.insert(e, Position{x: 200.0, y: 300.0});
     w.insert(e, inventory::Consumable::new(vec![(stats::VITALITY, 3)]));
     w.insert(e, inventory::ActiveEffect::new(vec![(stats::VITALITY, -3)]));
+    w.update_entities();
     println!("type hash: {:#0128b}", w.type_of(e));
     inventory::add_item(&w, p, e);
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
@@ -154,8 +144,8 @@ fn main() -> Result<(), Box<Error>> {
     println!("{:?}", w.get_value::<inventory::Inventory>(p).items);
     println!("should be 35: {}", stats::get_max(&w, p, stats::VITALITY));
 
-
-    MainPlayer::new(&mut w);
+    SpinPlayer::new(&mut w);
+    EnemyTrail::new(&mut w);
     
     println!("こんにしわ! starting main loop");
     let mut event_pump = sdl_context.event_pump()?;
@@ -173,10 +163,11 @@ fn main() -> Result<(), Box<Error>> {
             }
         }
 
-        MainPlayer::update(&w);
+
+
+        SpinPlayer::update(&w);
+        EnemyTrail::update(&w);
         
-        //using `update` syntax in function
-        chase_player(&w, p);
         //using new `run` SystemRunner syntax
         w.run(|(_, pos, vel): (&mut Player, &mut Position, &mut Velocity)| {
             if pos.x + 32.0 > 640.0 || pos.x < 0.0 {
@@ -241,6 +232,8 @@ fn main() -> Result<(), Box<Error>> {
         let _ = canvas.copy(&r[Sprites::Cursor], None, Rect::new(event_pump.mouse_state().x(), event_pump.mouse_state().y(), 16, 16));
 
         canvas.present();
+
+        w.update_entities();
         //std::thread::sleep(std::time::Duration::from_secs(2));
     }
 

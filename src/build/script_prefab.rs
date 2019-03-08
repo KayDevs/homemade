@@ -6,8 +6,8 @@ macro_rules! script_prefab (
         [Components]
         $($comp:ident: $comp_type:ty = $comp_default:expr;)*
         [Behaviour]
-        fn new($new_vars:ident) $new_function:block
-        fn update($update_vars:ident) $update_function:block
+        fn new($new_vars:ident, $new_world:ident) $new_function:block
+        fn update($update_vars:ident, $update_world:ident) $update_function:block
     }} => {
         #[derive(Clone)]
         pub struct $class_name {
@@ -18,20 +18,22 @@ macro_rules! script_prefab (
         }
         #[allow(unused)]
         impl $class_name {
-            pub fn new(w: &mut GameState) -> Entity {
+            pub fn init(w: &mut GameState) {
                 w.register_component::<$class_name>();
-                let e = w.create_entity();
-                w.insert(e, $class_name{$($var: $var_default),*});
+            }
+            pub fn new($new_world: &GameState) -> Entity {
+                let e = $new_world.create_entity();
+                $new_world.insert(e, $class_name{$($var: $var_default),*});
                 $(
-                    w.insert(e, $comp_default);
+                    $new_world.insert(e, $comp_default);
                 )*
-                w.run(|($new_vars, $($comp),*): (&mut $class_name, $(&mut $comp_type),*)| {
+                $new_world.run(|($new_vars, $($comp),*): (&mut $class_name, $(&mut $comp_type),*)| {
                     $new_function
                 });
                 e
             }
-            pub fn update(w: &GameState) {
-                w.run(|($update_vars, $($comp),*): (&mut $class_name, $(&mut $comp_type),*)| {
+            pub fn update($update_world: &GameState) {
+                $update_world.run(|($update_vars, $($comp),*): (&mut $class_name, $(&mut $comp_type),*)| {
                     $update_function
                 });
             }
