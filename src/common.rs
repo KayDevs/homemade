@@ -45,15 +45,16 @@ impl Component for Friction {
 	type Storage = HashMapStorage<Self>;
 }
 
+
 #[allow(unused)]
 pub fn run_physics(w: &GameState) {
-	w.run(|(pos, vel, acc): (&mut Position, &mut Velocity, &mut Acceleration)| {
+	w.run(|(vel, acc): (&mut Velocity, &mut Acceleration)| {
 		vel.x += acc.x;
 		vel.y += acc.y;
+	});
+	w.run(|(pos, vel): (&mut Position, &mut Velocity)| {
 		pos.x += vel.x;
 		pos.y += vel.y;
-		acc.x = 0.0;
-		acc.y = 0.0; //acceleration doesn't persist unless set explicitly
 	});
 	w.update_all(|i, vel: &mut Velocity| {
 		if let Some(fric) = w.clone::<Friction>(i) {
@@ -64,7 +65,7 @@ pub fn run_physics(w: &GameState) {
 			vel.y = 0.0;
 		}
 	});
-	//note: in things that contain stats, max acceleration is determined by Dexterity
+	//note: in things that contain stats, max velocity is determined by Dexterity
 }
 
 //for indexing
