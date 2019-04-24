@@ -13,4 +13,6 @@ For example, read()'ing a component while inside an update() block of the same c
 There's no way to guarantee to the compiler the data won't be invalidated, since it's all behind the black box of the World struct.
 
 Feebly I tried to implement a macro-based 'scripting' system via the .rsc files, but it quickly dawned on me that no, Rust is not a scripting language and it never will be (and that's a good thing!).
-However, for a timely development cycle something must be done, and this design is basically impossible to expose to Lua or any other scripting language (unless you're Catherine West)
+However, for a timely development cycle something must be done, and this design is basically impossible to expose to Lua or any other scripting language (unless you're Catherine West).
+
+I won't be working on this particular design any more, but I'm keeping it here for posterity.
